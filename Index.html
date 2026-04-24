@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline AE/ARE — GUESNE Pierrick</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:14px;min-height:100vh}
+
+.band{background:linear-gradient(135deg,#FF6B35 0%,#F5A623 35%,#F7C59F 60%,#3B82F6 100%);padding:18px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;position:relative;overflow:hidden}
+.band::before{content:'';position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.10)}
+.band::after{content:'';position:absolute;bottom:-25px;left:38%;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,.07)}
+.band h1{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.2px}
+.band p{font-size:11px;color:rgba(255,255,255,.82);margin-top:2px}
+.bpill{font-size:10px;font-weight:700;padding:4px 11px;border-radius:20px;border:1.5px solid rgba(255,255,255,.45);background:rgba(255,255,255,.18);color:#fff}
+
+.layout{max-width:1240px;margin:0 auto;padding:1.5rem 1.5rem 3rem}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.25rem}
+.kpi{border-radius:12px;padding:14px 16px;position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;bottom:-8px;right:-8px;width:40px;height:40px;border-radius:50%;opacity:.15}
+.k1{background:#FFF0E6;color:#A03010}.k1 .kv{color:#E05010}.k1 .kl{color:#C04010}.k1::after{background:#E05010}
+.k2{background:#E6F9F0;color:#0A6B44}.k2 .kv{color:#0D9060}.k2 .kl{color:#0A6B44}.k2::after{background:#0D9060}
+.k3{background:#EEE8FF;color:#4A18A0}.k3 .kv{color:#6B30C8}.k3 .kl{color:#4A18A0}.k3::after{background:#6B30C8}
+.k4{background:#FFF8E0;color:#8B5800}.k4 .kv{color:#B07000}.k4 .kl{color:#8B5800}.k4::after{background:#B07000}
+.kl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.kv{font-size:21px;font-weight:800;font-family:'JetBrains Mono',monospace}
+.ks{font-size:10px;margin-top:3px;opacity:.65;font-weight:500}
+
+.cfgbar{background:#fff;border:1.5px solid #E8E0D4;border-radius:12px;padding:11px 18px;margin-bottom:1.25rem;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.cfgbar label{font-size:12px;font-weight:700;color:#888}
+.cfgbar select{font-size:12px;padding:5px 10px;border:1.5px solid #DDD;border-radius:8px;background:#FAF8F5;color:#333;font-family:inherit;cursor:pointer}
+.cfgbar select:focus{outline:none;border-color:#FF6B35}
+.cfginfo{font-size:11px;color:#AAA;margin-left:2px}
+
+.crit{background:#FFFBF0;border:2px solid #F0C030;border-left:6px solid #C89010;border-radius:10px;padding:14px 18px;margin-bottom:1.25rem}
+.crit-title{font-size:13px;font-weight:800;color:#8B5800;margin-bottom:8px}
+.crit-body{display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
+.crit-text{font-size:11px;color:#6B4800;line-height:1.65;flex:1;min-width:180px}
+.cs{background:#fff;border:1.5px solid #EAE0CC;border-radius:10px;padding:11px 14px;min-width:168px;flex:1}
+.cs-lbl{font-size:9px;color:#A09050;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;font-weight:700}
+.cs-val{font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace}
+.cs-sub{font-size:11px;margin-top:3px;font-weight:600}
+.c-ok{color:#0D8B60}.c-ko{color:#CC2010}
+
+.card{background:#fff;border:1.5px solid #E8E0D4;border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.25rem}
+.ch{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.cdot{width:9px;height:9px;border-radius:50%}
+.ct{font-size:14px;font-weight:700;color:#1A1714}
+.cs2{font-size:11px;color:#888;margin-bottom:14px;margin-left:17px}
+
+.ytabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px}
+.ytab{font-size:12px;font-weight:700;padding:5px 14px;border:1.5px solid #DDD;border-radius:20px;background:transparent;color:#999;cursor:pointer;transition:all .15s}
+.ytab:hover{background:#FFF0E8;border-color:#FFB080;color:#E05010}
+.ytab.active{background:#FF6B35;color:#fff;border-color:#FF6B35}
+
+.pwrap{overflow-x:auto;margin-bottom:10px;border-radius:10px;border:1.5px solid #EAE4DC;background:#FAFAF8}
+.ptbl{border-collapse:collapse;min-width:100%}
+.ptbl thead th{font-size:10px;font-weight:800;color:#888;padding:8px 5px;white-space:nowrap;border-bottom:2px solid #DDD;text-align:center;background:#EEEAE4;text-transform:uppercase;letter-spacing:.06em}
+.ptbl thead th.ah{text-align:left;min-width:150px;padding-left:10px;position:sticky;left:0;z-index:3;background:#F5F2EE}
+.ptbl tbody td{padding:2px 3px;border-bottom:1px solid #F0EDE8;vertical-align:middle}
+.ptbl tbody td.ac{padding:4px 10px;white-space:nowrap;position:sticky;left:0;background:#fff;z-index:2;border-right:2px solid #EAE4DC}
+.ainp{font-size:13px;font-weight:800;width:126px;border:none;background:transparent;color:#1A1714;outline:none;border-bottom:1px solid transparent}
+.ainp:focus{border-bottom-color:#DDD}
+.cdott{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+.cw{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:70px;padding:2px}
+.ci{width:66px;font-size:13px;text-align:right;border:1.5px solid transparent;border-radius:5px;padding:4px 5px;background:transparent;color:#444;font-family:'JetBrains Mono',monospace;transition:all .1s;font-weight:600}
+.ci:hover{border-color:#DDD;background:#FAF8F5}
+.ci:focus{border-color:#FF6B35;background:#fff;outline:none}
+.ci.R{color:#C83800;font-weight:800;font-size:14px;background:#FFF2EC;border-color:#F8C0A0}
+.ci.E{color:#888;font-weight:500}
+.cbg{font-size:10px;line-height:1.4;padding:2px 7px;border-radius:4px;border:1.5px solid;cursor:pointer;white-space:nowrap;font-weight:800}
+.cbR{background:#FFEEE6;color:#C83800;border-color:#F0A880}
+.cbE{background:#F0F0F0;color:#999;border-color:#CCC}
+.csep td{background:#F0EDE8;padding:5px 10px;font-size:9px;font-weight:800;color:#AAA;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid #EAE4DC}
+.crow td{font-size:12px;padding:5px 6px;border-bottom:1px solid #F0EDE8;font-family:'JetBrains Mono',monospace;text-align:right;white-space:nowrap;font-weight:600}
+.crow td.lbl{text-align:left;font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;position:sticky;left:0;background:inherit;z-index:2;border-right:2px solid #EAE4DC;padding-left:10px;min-width:150px;color:#555}
+.r1 td{background:#FFF0E8;color:#B03000;font-weight:700}.r1 td.lbl{background:#FFF0E8;color:#B03000}
+.r2 td{background:#F4F4F4;color:#999}.r2 td.lbl{background:#F4F4F4;color:#888}
+.r3 td{background:#E8FAF2;color:#087040;font-weight:700}.r3 td.lbl{background:#E8FAF2;color:#087040}
+.r4 td{background:#EAE4FF;color:#4818A8;font-weight:700}.r4 td.lbl{background:#EAE4FF;color:#4818A8}
+.r5 td{background:#FFF6D8;color:#7A5800;font-weight:800;font-size:13px}.r5 td.lbl{background:#FFF6D8;color:#7A5800}
+.r6 td{background:#FFF3DC;color:#905800;font-weight:600}.r6 td.lbl{background:#FFF3DC;color:#905800}
+.r7 td{background:#FFEAE4;color:#B03008;font-weight:800;font-size:13px}.r7 td.lbl{background:#FFEAE4;color:#B03008}
+.r8 td{background:#E0F8EC;color:#077040;font-weight:800;font-size:13px}.r8 td.lbl{background:#E0F8EC;color:#077040}
+.atc{text-align:right;font-size:12px;font-weight:800;font-family:'JetBrains Mono',monospace;padding:0 10px;white-space:nowrap;color:#333}
+.delbtn{font-size:11px;padding:2px 8px;border:1.5px solid #DDD;border-radius:5px;background:transparent;color:#BBB;cursor:pointer;font-weight:700}
+.delbtn:hover{background:#FFF0F0;color:#CC2020;border-color:#F0A0A0}
+.addbtn{font-size:12px;padding:7px 16px;border:1.5px dashed #DDD;border-radius:8px;background:transparent;color:#AAA;cursor:pointer;margin-top:8px;font-weight:700;transition:all .15s}
+.addbtn:hover{background:#FFF5F0;border-color:#FF8050;color:#E05010}
+.sep{border:none;border-top:1.5px solid #EAE4DC;margin:.9rem 0}
+
+.bgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.bulle{border-radius:10px;padding:12px 14px;border:1.5px solid}
+.bl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.bv{font-size:17px;font-weight:800;font-family:'JetBrains Mono',monospace}
+.bs{font-size:10px;margin-top:3px;font-weight:500;opacity:.75}
+.bu1{background:#FFF0E8;border-color:#F8C8A8;color:#A83010}.bu1 .bv{color:#E05010}
+.bu2{background:#E8F8F0;border-color:#A8DFC8;color:#0A6040}.bu2 .bv{color:#0D9060}
+.bu3{background:#FFFAE8;border-color:#F8DC80;color:#7A5000}.bu3 .bv{color:#B07000}
+.bu4{background:#EEE8FF;border-color:#C8B0F8;color:#4010A0}.bu4 .bv{color:#6030D0}
+.bu5{background:#FFE8F4;border-color:#F8B0D8;color:#A01060}.bu5 .bv{color:#D01080}
+
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.scard{border-radius:10px;padding:14px;border:1.5px solid}
+.scard.sok{background:#EDFAF4;border-color:#A8DFC8}
+.scard.sko{background:#FFF0EE;border-color:#F8C0B0}
+.stitle{font-size:12px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;color:#333}
+.sbadge{font-size:9px;padding:2px 7px;border-radius:10px;font-weight:800}
+.sbok{background:#DDFAF0;color:#0A7050;border:1px solid #A8DFC8}
+.sbko{background:#FFEEE8;color:#CC2010;border:1px solid #F8C0B0}
+.srow{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.sl{font-size:11px;color:#666;font-weight:500}
+.sv{font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.prog{height:6px;border-radius:3px;background:#EEE;margin:5px 0 3px;overflow:hidden}
+.pf{height:100%;border-radius:3px}
+.sverd{font-size:11px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.07);font-weight:700;line-height:1.5}
+
+.cfilt{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.cfb{font-size:11px;padding:5px 12px;border:1.5px solid #DDD;border-radius:20px;background:transparent;color:#999;cursor:pointer;font-weight:600}
+.cfb:hover{background:#FFF5F0;border-color:#FFB080;color:#E05010}
+.cfb.active{background:#FF6B35;color:#fff;border-color:#FF6B35}
+.cleg{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;font-size:11px;color:#666;font-weight:600}
+.cleg span{display:flex;align-items:center;gap:5px}
+.ld{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+
+.bgrid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
+.ytbl{width:100%;border-collapse:collapse;font-size:12px}
+.ytbl th{font-size:9px;font-weight:800;color:#AAA;text-align:right;padding:6px 8px;border-bottom:2px solid #EAE4DC;text-transform:uppercase;letter-spacing:.06em}
+.ytbl th:first-child{text-align:left}
+.ytbl td{text-align:right;padding:7px 8px;border-bottom:1px solid #EEE;font-family:'JetBrains Mono',monospace;font-size:12px;color:#333}
+.ytbl td:first-child{text-align:left;font-family:'Outfit',sans-serif;font-weight:700;color:#333}
+.ytbl .trt td{font-weight:800;background:#FFF5F0;border-bottom:none;border-top:2px solid #EAE4DC;color:#333}.ytbl .trt td:last-child{color:#E05010;font-size:14px}
+.msi{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid #EEE}
+.msi:last-child{border-bottom:none}
+.msd{width:11px;height:11px;border-radius:50%;flex-shrink:0;margin-top:2px}
+.msdate{font-size:11px;font-weight:700;min-width:95px;font-family:'JetBrains Mono',monospace;color:#333}
+.mstxt{font-size:12px;color:#666;line-height:1.4;font-weight:500}
+.mstag{display:inline-block;font-size:9px;padding:2px 7px;border-radius:10px;margin-top:3px;font-weight:800}
+.tw{background:#FFF8E0;color:#906000}.td{background:#FFE8E8;color:#A02020}.tok{background:#E8FFF0;color:#0A7040}.tbl{background:#E8F2FF;color:#1040B0}
+
+.vi{padding:10px 14px;border-radius:8px;margin-bottom:8px;border-left:4px solid}
+.vid{background:#FFF0EE;border-color:#CC2010}.vid .vt{color:#AA1808}
+.vii{background:#EEF5FF;border-color:#2060D0}.vii .vt{color:#1040B0}
+.viw{background:#FFFBE8;border-color:#C09000}.viw .vt{color:#806000}
+.vio{background:#EEFAF4;border-color:#108050}.vio .vt{color:#087040}
+.vt{font-size:12px;font-weight:800;margin-bottom:2px}
+.vtx{font-size:11px;color:#666;line-height:1.5}
+
+.expbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.5rem;align-items:center}
+.ebtn{font-size:12px;font-weight:800;padding:9px 20px;border-radius:8px;border:1.5px solid;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:7px}
+.exl{background:#E8FFF0;color:#0A7040;border-color:#A8DFC8}.exl:hover{background:#D0FAE8}
+.epdf{background:#FFE8E8;color:#A02020;border-color:#F8B0B0}.epdf:hover{background:#FFD0D0}
+.enote{font-size:11px;color:#AAA}
+
+@media(max-width:700px){.kpi-grid,.bgrid{grid-template-columns:repeat(2,1fr)}.sgrid,.bgrid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="band">
+  <div>
+    <h1>GUESNE Pierrick &mdash; Pipeline AE / ARE</h1>
+    <p>Janvier 2026 &agrave; D&eacute;cembre 2032 &nbsp;&middot;&nbsp; N&eacute; le 15/02/1968 &nbsp;&middot;&nbsp; Retraite 1er avril 2032 &nbsp;&middot;&nbsp; 64 ans</p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <span class="bpill">R&eacute;alis&eacute; = orange gras</span>
+    <span class="bpill">Estim&eacute; = gris normal</span>
+    <button onclick="importJSON()" style="font-size:12px;font-weight:800;padding:7px 16px;border-radius:8px;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.18);color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px">&#128228; Charger</button>
+    <button onclick="exportJSON()" style="font-size:12px;font-weight:800;padding:7px 16px;border-radius:8px;border:2px solid #fff;background:#fff;color:#E05010;cursor:pointer;display:flex;align-items:center;gap:6px">&#128190; Sauvegarder</button>
+  </div>
+</div>
+<div class="layout">
+
+<div class="kpi-grid">
+  <div class="kpi k1"><div class="kl">ARE journali&egrave;re</div><div class="kv">97 &euro;/j</div><div class="ks">2 910 &euro; nets/mois</div></div>
+  <div class="kpi k2"><div class="kl">Droits acquis &mdash; ATMP 53</div><div class="kv">822 j</div><div class="ks">base initiale</div></div>
+  <div class="kpi k3"><div class="kl">Droits acquis + Boucles 53</div><div class="kv">1&thinsp;152 j</div><div class="ks">+ 330 j rechargement</div></div>
+  <div class="kpi k4"><div class="kl">Retraite cible</div><div class="kv">1 avr. 2032</div><div class="ks">64 ans</div></div>
+</div>
+
+<div class="cfgbar">
+  <span style="font-size:13px;font-weight:800;color:#FF6B35">&#8853; Simulation &mdash; date ouverture ARE</span>
+  <label for="asm">Mois&nbsp;:</label>
+  <select id="asm" onchange="updateAREStart()">
+    <option value="1">Janvier</option><option value="2">F&eacute;vrier</option><option value="3">Mars</option>
+    <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+    <option value="7" selected>Juillet</option><option value="8">Ao&ucirc;t</option><option value="9">Septembre</option>
+    <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">D&eacute;cembre</option>
+  </select>
+  <label for="asy">Ann&eacute;e&nbsp;:</label>
+  <select id="asy" onchange="updateAREStart()">
+    <option value="2026" selected>2026</option><option value="2027">2027</option><option value="2028">2028</option>
+  </select>
+  <span class="cfginfo" id="areinfo">ARE active d&egrave;s juillet 2026</span>
+</div>
+
+<div class="card" style="border-top:3px solid #FF6B35;padding-top:1rem">
+  <div style="font-size:12px;font-weight:800;margin-bottom:10px;color:#333">Synth&egrave;se <span id="synth-date-label"></span> &mdash; ann&eacute;e <span id="bulleyr">2026</span></div>
+  <div class="bgrid" id="bgrid"></div>
+  <div class="sgrid" id="sgrid"></div>
+</div>
+<div class="crit">
+  <div class="crit-title">&#9888; Date cible critique &mdash; 1er f&eacute;vrier 2030 (62 ans)</div>
+  <div class="crit-body">
+    <div class="crit-text">Pour l&apos;ARE Senior, tu dois imp&eacute;rativement &ecirc;tre encore indemnis&eacute; &agrave; cette date.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap" id="j62stats"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ch"><div class="cdot" style="background:#FF6B35"></div><div class="ct">Pipeline AE &mdash; saisie mensuelle</div></div>
+  <div class="cs2">Saisis librement chaque mois. Clique sur <span style="color:#D04010;font-weight:800">R&eacute;alis&eacute;</span> / <span style="color:#BBB;font-weight:700">Estim&eacute;</span> pour changer le statut.</div>
+  <div class="ytabs" id="ytabs"></div>
+  <div class="pwrap"><table class="ptbl" id="ptbl"></table></div>
+  <button class="addbtn" onclick="addAct()">+ Ajouter une activit&eacute;</button>
+</div>
+
+<div class="expbar">
+  <button class="ebtn exl" onclick="exportCSV()">&#128202; Excel (.csv)</button>
+  <button class="ebtn epdf" onclick="window.print()">&#128196; PDF</button>
+  <button class="ebtn" onclick="exportJSON()" style="background:#E8F4FF;color:#1040A0;border-color:#A0C0F0;font-weight:800">&#128190; Sauvegarder mes données</button>
+  <button class="ebtn" onclick="importJSON()" style="background:#E8FFE8;color:#0A6020;border-color:#80C080;font-weight:800">&#128228; Charger mes données</button>
+  <button class="ebtn" onclick="clearData()" style="background:#FFF8E8;color:#906000;border-color:#E8C870">&#128465; Effacer</button>
+  <span id="save-indicator" style="font-size:11px;color:#0A7050;font-weight:700;transition:opacity 1s;opacity:0;align-self:center">&#10003; Sauvegardé automatiquement</span>
+</div>
+
+<div class="cfilt">
+  <button class="cfb active" onclick="setCV('all')">Toutes ann&eacute;es</button>
+  <button class="cfb" onclick="setCV('2026')">2026</button>
+  <button class="cfb" onclick="setCV('2027')">2027</button>
+  <button class="cfb" onclick="setCV('2028')">2028</button>
+  <button class="cfb" onclick="setCV('2029')">2029</button>
+  <button class="cfb" onclick="setCV('2030')">2030+</button>
+</div>
+
+<div class="card">
+  <div class="ch"><div class="cdot" style="background:#0D9060"></div><div class="ct">Revenus mensuels</div></div>
+  <div class="cs2">AE nets par activit&eacute; + ARE nette vers&eacute;e</div>
+  <div class="cleg" id="rleg"></div>
+  <div style="position:relative;width:100%;height:240px"><canvas id="RC" role="img" aria-label="Revenus mensuels">Revenus.</canvas></div>
+</div>
+
+<div class="card">
+  <div class="ch"><div class="cdot" style="background:#6B30C8"></div><div class="ct">Jours ARE restants</div></div>
+  <div class="cs2">Valeurs sign&eacute;es identiques &agrave; l&apos;Excel &mdash; n&eacute;gatif = droits d&eacute;pass&eacute;s</div>
+  <div class="cleg">
+    <span><span class="ld" style="background:#E05010"></span>Base 822 j (ATMP 53)</span>
+    <span><span class="ld" style="background:#0D9060"></span>Base 1&thinsp;152 j (+ Boucles 53)</span>
+    <span><span class="ld" style="background:#CC2010"></span>Seuil ARE Senior &mdash; 1er f&eacute;v. 2030</span>
+  </div>
+  <div style="position:relative;width:100%;height:220px"><canvas id="JC" role="img" aria-label="Jours ARE restants">Jours.</canvas></div>
+</div>
+
+<div class="bgrid2">
+  <div class="card">
+    <div class="ch"><div class="cdot" style="background:#B07000"></div><div class="ct">Synth&egrave;ses annuelles &mdash; R&eacute;alis&eacute;s + Estimations</div></div>
+    <table class="ytbl" id="ytbl"></table>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="cdot" style="background:#6B30C8"></div><div class="ct">Jalons cl&eacute;s</div></div>
+    <div id="mslist"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="ch"><div class="cdot" style="background:#CC2010"></div><div class="ct">Veille l&eacute;gislative</div></div>
+  <div class="cs2">Alertes r&eacute;glementaires &middot; mis &agrave; jour avril 2026</div>
+  <div class="vi vid"><div class="vt">Nouvelle r&eacute;forme 2026 en n&eacute;gociation &mdash; risque &eacute;lev&eacute;</div><div class="vtx">Objectif : 2&ndash;2,5 Mds&euro; d&apos;&eacute;conomies/an. Allongement possible dur&eacute;e minimale d&apos;affiliation (6&rarr;8&ndash;12 mois). Convention actuelle valide jusqu&apos;au 31/12/2028.</div></div>
+  <div class="vi vii"><div class="vt">Bornes seniors d&eacute;cal&eacute;es de 2 ans (avr. 2025) &mdash; favorable</div><div class="vtx">P&eacute;riode r&eacute;f&eacute;rence 36 mois accessible d&egrave;s 55 ans. Dur&eacute;e max 27/36 mois &agrave; partir de 57 ans. Positif&nbsp;: 58 ans au d&eacute;marrage ARE.</div></div>
+  <div class="vi viw"><div class="vt">Cumul AE + ARE plafonn&eacute; &agrave; 60% des droits restants</div><div class="vtx">Ecr&ecirc;tement &agrave; surveiller particuli&egrave;rement 2026&ndash;2027.</div></div>
+  <div class="vi vio"><div class="vt">ARE revaloris&eacute;e +0,5% au 1er juillet 2025</div><div class="vtx">Ta base de 97&nbsp;&euro;/j reste calcul&eacute;e sur ton salaire r&eacute;el.</div></div>
+</div>
+
+</div>
+<script>
+const COLORS=['#1A56D4','#D94010','#6B3FD4','#A06000','#C2186E','#0D8B68','#1D9E75','#5A6282'];
+const ARE_DAY=97,ARE_MONTH=2970,J_BASE=822,J_BOUCLES=1152,CHARGES=0.23;
+const MFR=['Jan','Fev','Mar','Avr','Mai','Jun','Jul','Aou','Sep','Oct','Nov','Dec'];
+const MFRF=['Janvier','Fevrier','Mars','Avril','Mai','Juin','Juillet','Aout','Septembre','Octobre','Novembre','Decembre'];
+const TL=[];
+for(let y=2026;y<=2032;y++){for(let m=1;m<=12;m++){if(y===2032&&m>4)break;TL.push({y,m,label:MFR[m-1]+' '+String(y).slice(2)});}}
+function k(t){return t.y+'-'+t.m;}
+const EX={
+'2026-2':{oa:4000,or:true,ca:0,cr:false,au:0,ar:false},
+'2026-3':{oa:4000,or:true,ca:147,cr:true,au:0,ar:false},
+'2026-4':{oa:0,or:false,ca:1614,cr:true,au:1980,ar:false},
+'2026-5':{oa:4000,or:false,ca:0,cr:false,au:0,ar:false},
+'2026-6':{oa:0,or:false,ca:4000,cr:false,au:0,ar:false},
+'2026-7':{oa:4000,or:false,ca:0,cr:false,au:0,ar:false},
+'2026-8':{oa:0,or:false,ca:0,cr:false,au:0,ar:false},
+'2026-9':{oa:4000,or:false,ca:0,cr:false,au:0,ar:false},
+'2026-10':{oa:0,or:false,ca:4000,cr:false,au:0,ar:false},
+'2026-11':{oa:4000,or:false,ca:0,cr:false,au:0,ar:false},
+'2026-12':{oa:0,or:false,ca:0,cr:false,au:0,ar:false},
+'2027-1':{oa:4000,or:false,ca:0,cr:false,au:0,ar:false},
+'2027-2':{oa:0,or:false,ca:3000,cr:false,au:0,ar:false},
+'2027-3':{oa:4000,or:false,ca:0,cr:false,au:2000,ar:false},
+'2027-4':{oa:0,or:false,ca:0,cr:false,au:0,ar:false},
+'2027-5':{oa:4000,or:false,ca:3000,cr:false,au:0,ar:false},
+'2027-6':{oa:0,or:false,ca:0,cr:false,au:0,ar:false},
+'2027-7':{oa:4000,or:false,ca:0,cr:false,au:0,ar:false},
+'2027-8':{oa:0,or:false,ca:3000,cr:false,au:0,ar:false},
+'2027-9':{oa:4000,or:false,ca:0,cr:false,au:0,ar:false},
+'2027-10':{oa:0,or:false,ca:3000,cr:false,au:0,ar:false},
+'2027-11':{oa:4000,or:false,ca:0,cr:false,au:0,ar:false},
+'2027-12':{oa:0,or:false,ca:0,cr:false,au:0,ar:false},
+'2028-3':{oa:0,or:false,ca:0,cr:false,au:2000,ar:false}
+};
+let acts=[
+  {name:'OUEST ACRO',values:{},statut:{}},
+  {name:'CAFPI',values:{},statut:{}},
+  {name:'AUTRES AE',values:{},statut:{}},
+];
+TL.forEach(t=>{
+  const kk=k(t),d=EX[kk];
+  acts[0].values[kk]=d?d.oa:0;acts[0].statut[kk]=d&&d.or?'R':'E';
+  acts[1].values[kk]=d?d.ca:0;acts[1].statut[kk]=d&&d.cr?'R':'E';
+  acts[2].values[kk]=d?d.au:0;acts[2].statut[kk]=d&&d.ar?'R':'E';
+});
+const TODAY=new Date();const CUR_YR=String(Math.min(Math.max(TODAY.getFullYear(),2026),2032));const CUR_MON=TODAY.toLocaleString('fr-FR',{month:'long'}).replace(/^./,s=>s.toUpperCase());let cv='all',sy=CUR_YR,RC=null,JC=null,asm=7,asy=2026;
+
+function isA(y,m){return y>asy||(y===asy&&m>=asm);}
+function fmt(n,d=0){if(n===null||n===undefined)return'---';const v=parseFloat(n);if(isNaN(v))return'---';return v.toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});}
+
+function calcTL(){
+  // Formule exacte conforme Excel:
+  // ARE_plafond = 97 * 30 = 2910 euros/mois (base 30 jours)
+  // AE_RETENU = AE_brut * 0.5
+  // ARE_NETTE = max(0, 2910 - AE_RETENU)
+  // CONSO_jours = ARE_NETTE / 99  (= ARE_NETTE * 30 / 2970)
+  const ARE_PLAFOND = 2910; // 97 * 30
+  const DIVISEUR_CONSO = 99; // 2970 / 30
+  let j8=J_BASE,j11=J_BOUCLES;
+  return TL.map(t=>{
+    const kk=k(t);
+    const brut=acts.reduce((s,a)=>s+(+a.values[kk]||0),0);
+    const ok=isA(t.y,t.m);
+    const ret=ok?Math.round(brut*0.5*100)/100:0;
+    const net=Math.round(brut*(1-CHARGES)*100)/100;
+    const are=ok?Math.round(Math.max(0,ARE_PLAFOND-ret)*100)/100:0;
+    const conso=ok?Math.round(are/DIVISEUR_CONSO*10000)/10000:0;
+    const cum=Math.round((net+are)*100)/100;
+    if(ok){j8=Math.round((j8-conso)*10000)/10000;j11=Math.round((j11-conso)*10000)/10000;}
+    return{...t,brut,ret,net,are,cum,conso,ok,
+      j8:ok?j8:null,j11:ok?j11:null,
+      ba:acts.map(a=>({v:Math.round((+a.values[kk]||0)*(1-CHARGES)*100)/100,r:a.statut[kk]==='R'}))};
+  });
+}
+
+function updateAREStart(){
+  asm=+document.getElementById('asm').value;
+  asy=+document.getElementById('asy').value;
+  document.getElementById('areinfo').textContent='ARE active des '+MFRF[asm-1]+' '+asy+' · Avant = AE seules';
+  renderAll();
+}
+
+function renderJ62(ms){
+  const m=ms.find(d=>d.y===2030&&d.m===2);
+  const j8=m&&m.j8!==null?m.j8:-471.33;
+  const j11=m&&m.j11!==null?m.j11:-141.33;
+  const ok8=j8>0,ok11=j11>0;
+  const r8=Math.round(Math.abs(j8)),r11=Math.round(Math.abs(j11));
+  document.getElementById('j62stats').innerHTML=
+    '<div class="j62-stat">'
+    +'<div class="j62-lbl">Base 822 j (ATMP 53)</div>'
+    +'<div class="j62-val" style="color:'+(ok8?'var(--green)':'var(--red)')+'">'+(!ok8?'':'+')+fmt(j8,2)+' j</div>'
+    +'<div class="j62-sub" style="color:'+(ok8?'var(--green)':'var(--red)')+'">'+
+      (ok8?'Encore indemnise ('+r8+' j restants) &mdash; ARE Senior possible'
+          :'Il te manque environ '+r8+' jour'+(r8>1?'s':'')+' d\'ARE pour pretendre a l\'ARE Senior dans le scenario Base 822 j')
+    +'</div></div>'
+    +'<div class="j62-stat">'
+    +'<div class="j62-lbl">Base 1 152 j (+ Boucles 53)</div>'
+    +'<div class="j62-val" style="color:'+(ok11?'var(--green)':'var(--red)')+'">'+(!ok11?'':'+')+fmt(j11,2)+' j</div>'
+    +'<div class="j62-sub" style="color:'+(ok11?'var(--green)':'var(--red)')+'">'+
+      (ok11?'Il te reste environ '+r11+' jours ARE a consommer, tu peux donc pretendre a l\'ARE Senior dans le scenario Base 822 j + Rechargement'
+           :'Il te manque environ '+r11+' jour'+(r11>1?'s':'')+' d\'ARE &mdash; ARE Senior impossible')
+    +'</div></div>';
+}
+
+function renderYTabs(){
+  document.getElementById('ytabs').innerHTML=
+    ['2026','2027','2028','2029','2030','2031','2032'].map(y=>
+      '<button class="ytab'+(y===sy?' active':'')+'" onclick="setSY(\''+y+'\')">'+y+'</button>'
+    ).join('');
+}
+function setSY(y){sy=y;renderYTabs();renderAll();}
+
+function renderPipe(){
+  const fm=TL.filter(t=>String(t.y)===sy);
+  const ms=calcTL();
+  const fc=ms.filter(t=>String(t.y)===sy);
+  let h='<thead><tr><th class="ah">Activite / Indicateur</th>';
+  fm.forEach(t=>{h+='<th>'+MFR[t.m-1]+'</th>';});
+  h+='<th>Total</th><th></th></tr></thead><tbody>';
+  acts.forEach((a,i)=>{
+    const col=COLORS[i%COLORS.length];
+    h+='<tr><td class="ac"><span class="cdot" style="background:'+col+'"></span><input class="ainp" value="'+a.name+'" oninput="acts['+i+'].name=this.value;renderLeg();updC()"></td>';
+    let rt=0;
+    fm.forEach(t=>{
+      const kk=k(t),vv=+a.values[kk]||0;rt+=vv;const isR=a.statut[kk]==='R';
+      const aok=isA(t.y,t.m);
+      h+='<td style="'+(aok?'':'opacity:.5')+'">'
+        +'<div class="cw">'
+        +'<input class="ci '+(isR?'R':'E')+'" type="number" min="0" step="100" value="'+(vv||'')+'" placeholder="0" onchange="acts['+i+'].values[\''+kk+'\']=+this.value||0;renderAll()">'
+        +'<button class="cbg '+(isR?'cbR':'cbE')+'" onclick="tog('+i+',\''+kk+'\')">'+( isR?'Realise':'Estime')+'</button>'
+        +'</div></td>';
+    });
+    h+='<td class="atc">'+fmt(rt)+' &euro;</td><td><button class="delbtn" onclick="delAct('+i+')">&times;</button></td></tr>';
+  });
+  h+='<tr class="csep"><td colspan="'+(fm.length+3)+'">Calculs automatiques</td></tr>';
+  const rows=[
+    {cls:'r1',lbl:'Total AE brut',get:d=>d.brut,suf:' \u20ac',dec:0,tot:true},
+    {cls:'r2',lbl:'AE retenu France Travail',get:d=>d.ret,suf:' \u20ac',dec:0,tot:true},
+    {cls:'r3',lbl:'NET AE estime',get:d=>d.net,suf:' \u20ac',dec:0,tot:true},
+    {cls:'r4',lbl:'ARE NETTE versee',get:d=>d.are,suf:' \u20ac',dec:0,tot:true},
+    {cls:'r5',lbl:'CUMUL NET AE + ARE',get:d=>d.cum,suf:' \u20ac',dec:0,tot:true},
+    {cls:'r6',lbl:'ARE consommee (j)',get:d=>d.conso,suf:' j',dec:2,tot:false},
+    {cls:'r7',lbl:'Jours restants 822 j',get:d=>d.j8,suf:'',dec:2,tot:false,sg:true},
+    {cls:'r8',lbl:'Jours restants 1 152 j',get:d=>d.j11,suf:'',dec:2,tot:false,sg:true},
+  ];
+  rows.forEach(r=>{
+    h+='<tr class="crow '+r.cls+'"><td class="lbl">'+r.lbl+'</td>';
+    let tot=0;
+    fc.forEach(d=>{
+      const vv=r.get(d);
+      if(typeof vv==='number')tot+=vv;
+      const neg=r.sg&&vv!==null&&vv<0;
+      const na=vv===null;
+      h+='<td style="'+(neg?'color:var(--red)!important;font-weight:800!important':'')+'">'+( na?'---':fmt(vv,r.dec)+r.suf)+'</td>';
+    });
+    const lv=fc.length>0?r.get(fc[fc.length-1]):null;
+    const dv=r.tot?tot:lv;
+    const neg=r.sg&&dv!==null&&dv<0;
+    h+='<td style="'+(neg?'color:var(--red)!important;font-weight:800!important':'')+'">'+(dv===null?'---':fmt(dv,r.dec)+r.suf)+'</td><td></td></tr>';
+  });
+  h+='</tbody>';
+  document.getElementById('ptbl').innerHTML=h;
+}
+
+function tog(ai,kk){acts[ai].statut[kk]=acts[ai].statut[kk]==='R'?'E':'R';renderAll();}
+function addAct(){const nv={name:'Nouvelle activite',values:{},statut:{}};TL.forEach(t=>{nv.v[k(t)]=0;nv.s[k(t)]='E';});acts.push(nv);renderPipe();renderLeg();updC();}
+function delAct(i){acts.splice(i,1);renderPipe();renderLeg();updC();}
+
+function renderBulles(ms){
+  const yr=sy;
+  document.getElementById('bulleyr').textContent=yr;
+  const yrM=ms.filter(m=>String(m.y)===yr);
+  const lastYrMonth = yr==='2032'?4:12;
+
+  // Mois REALISES = statut R sur au moins une activite
+  const moisRealises=yrM.filter(m=>{
+    const kk=m.y+'-'+m.m;
+    return acts.some(a=>a.statut[kk]==='R'&&(+a.values[kk]||0)>0);
+  });
+  // Dernier mois realise
+  const dernierR=moisRealises.length>0?moisRealises[moisRealises.length-1]:null;
+  // Mois precedent au dernier realise
+  const moisPrecedent=dernierR?yrM.find(m=>m.m===dernierR.m):null;
+
+  // Cumul realise AE nets — uniquement mois marqués R
+  const cumAE_real=moisRealises.reduce((s,m)=>s+m.net,0);
+  const nbR=moisRealises.length;
+  const moyAE=nbR>0?Math.round(cumAE_real/nbR):0;
+
+  // Dernier mois realise et mois restants
+  const dernierMoisNum=dernierR?dernierR.m:0;
+  const moisRestants=lastYrMonth-dernierMoisNum;
+
+  // Projection AE nets fin annee = cumul realise + moyenne * mois restants
+  const projAE=nbR>0?Math.round(cumAE_real+moyAE*moisRestants):0;
+
+  // ARE versee reelle = uniquement les mois où l'ARE est active (ok=true)
+  // ET où le mois a été réalisé (statut R) OU est un mois sans AE déjà passé
+  // Règle simple : ARE réelle = mois ok=true ET (brut=0 ET mois <= dernierMoisNum) OU statut R
+  const moisARE_real=yrM.filter(m=>{
+    if(!m.ok) return false; // ARE pas encore active ce mois
+    const kk=m.y+'-'+m.m;
+    const isR=acts.some(a=>a.statut[kk]==='R'&&(+a.values[kk]||0)>0);
+    // Mois réalisé avec AE = R
+    if(isR) return true;
+    // Mois sans AE ET avant ou égal au dernier mois réalisé = ARE automatiquement versée
+    if(m.brut===0&&m.m<=dernierMoisNum) return true;
+    return false;
+  });
+  const cumARE_real=moisARE_real.reduce((s,m)=>s+m.are,0);
+  const nbARE_real=moisARE_real.length;
+
+  // Cumul net total realise = AE nets + ARE reelles
+  const cumNet_real=cumAE_real+cumARE_real;
+
+  // Projection ARE fin annee : ARE active sur mois restants (sans AE supposée)
+  const moisARE_rest=yrM.filter(m=>m.ok&&m.m>dernierMoisNum);
+  const projARE=Math.round(cumARE_real+moisARE_rest.length*2910);
+
+  // Jours restants
+  const ljM=yrM.filter(m=>m.j8!==null);
+  const lastJ=ljM.length>0?ljM[ljM.length-1]:null;
+  const j8f=lastJ?lastJ.j8:J_BASE;
+  const j11f=lastJ?lastJ.j11:J_BOUCLES;
+
+  document.getElementById('bgrid').innerHTML=
+    // Bulle 1: salaire net du dernier mois realise
+    '<div class="bulle bu1">'
+      +'<div class="bl">Salaire net &mdash; '+(dernierR?(MFR[dernierR.m-1]+' '+yr):'aucun mois realise')+'</div>'
+      +'<div class="bv">'+(dernierR?fmt(dernierR.cum)+' &euro;':'---')+'</div>'
+      +'<div class="bs">AE nets + ARE versee</div>'
+    +'</div>'
+    // Bulle 2: cumul salaires nets realises depuis janvier
+    +'<div class="bulle bu2">'
+      +'<div class="bl">Cumul salaires nets &mdash; janv. a '+(dernierR?MFR[dernierR.m-1]:'---')+'</div>'
+      +'<div class="bv">'+(nbR>0?fmt(cumNet_real)+' &euro;':'---')+'</div>'
+      +'<div class="bs">'+(nbR>0?nbR+' mois realises':'aucun mois realise')+'</div>'
+    +'</div>'
+    // Bulle 3: projection AE nets a fin decembre (hors estimations)
+    +'<div class="bulle bu3">'
+      +'<div class="bl">Projection AE nets &mdash; fin '+(yr==='2032'?'avr.':'dec.')+' '+yr+'</div>'
+      +'<div class="bv">'+(nbR>0?fmt(projAE)+' &euro;':'---')+'</div>'
+      +'<div class="bs">'+(nbR>0?'Sal. moy. net realise : '+fmt(moyAE)+' &euro;/mois':'aucune donnee')+'</div>'
+    +'</div>'
+    // Bulle 4: ARE versee depuis janvier de l'annee selectionnee (realise uniquement)
+    +'<div class="bulle bu4">'
+      +'<div class="bl">ARE versee &mdash; janv. '+yr+' a '+(dernierR?MFR[dernierR.m-1]:'ce jour')+'</div>'
+      +'<div class="bv">'+fmt(cumARE_real)+' &euro;</div>'
+      +'<div class="bs">'+(moisARE_rest.length>0?'Est. a fin '+yr+' : '+fmt(projARE)+' &euro;':'sont comptabilisees')+'</div>'
+    +'</div>'
+    // Bulle 5: AE nets verses depuis janvier de l'annee selectionnee (realise uniquement)
+    +'<div class="bulle bu5">'
+      +'<div class="bl">AE nets verses &mdash; janv. '+yr+' a '+(dernierR?MFR[dernierR.m-1]:'ce jour')+'</div>'
+      +'<div class="bv">'+fmt(cumAE_real)+' &euro;</div>'
+      +'<div class="bs">'+(nbR>0?'Est. a fin '+yr+' : '+fmt(projAE)+' &euro;':'aucun mois realise')+'</div>'
+    +'</div>';
+  const f30=ms.find(m=>m.y===2030&&m.m===2);
+  const j8_62=f30&&f30.j8!==null?f30.j8:-471.33;
+  const j11_62=f30&&f30.j11!==null?f30.j11:-141.33;
+  const ok8=j8_62>0,ok11=j11_62>0;
+  const p8=Math.min(100,Math.max(0,Math.round(j8f/J_BASE*100)));
+  const p11=Math.min(100,Math.max(0,Math.round(j11f/J_BOUCLES*100)));
+  document.getElementById('sgrid').innerHTML=
+    '<div class="scard '+(ok8?'sok':'sko')+'">'
+    +'<div class="stitle">Base 822 j (ATMP 53) <span class="sbadge '+(ok8?'sbok':'sbko')+'">'+(ok8?'ARE Senior v':'ARE Senior x')+'</span></div>'
+    +'<div class="srow"><span class="sl">Jours restants fin '+yr+'</span><span class="sv" style="color:'+(j8f>=0?'var(--green)':'var(--red)')+'">'+fmt(j8f,2)+' j</span></div>'
+    +'<div class="prog"><div class="pf" style="width:'+p8+'%;background:'+(p8>30?'var(--teal)':'var(--red)')+'"></div></div>'
+    +'<div class="srow"><span class="sl">Au 1er fev. 2030</span><span class="sv" style="color:'+(ok8?'var(--green)':'var(--red)')+'">'+fmt(j8_62,2)+' j</span></div>'
+    +'<div class="sverd" style="color:'+(ok8?'var(--green)':'var(--red)')+'">'+
+      (ok8?'Encore '+Math.round(Math.abs(j8_62))+' j &mdash; ARE Senior accessible':'Il manque ~'+Math.round(Math.abs(j8_62))+' j pour etre indemnise au 1er fev. 2030')
+    +'</div></div>'
+    +'<div class="scard '+(ok11?'sok':'sko')+'">'
+    +'<div class="stitle">Base 1 152 j (+ Boucles 53) <span class="sbadge '+(ok11?'sbok':'sbko')+'">'+(ok11?'ARE Senior v':'ARE Senior x')+'</span></div>'
+    +'<div class="srow"><span class="sl">Jours restants fin '+yr+'</span><span class="sv" style="color:'+(j11f>=0?'var(--green)':'var(--red)')+'">'+fmt(j11f,2)+' j</span></div>'
+    +'<div class="prog"><div class="pf" style="width:'+p11+'%;background:'+(p11>30?'var(--teal)':'var(--red)')+'"></div></div>'
+    +'<div class="srow"><span class="sl">Au 1er fev. 2030</span><span class="sv" style="color:'+(ok11?'var(--green)':'var(--red)')+'">'+fmt(j11_62,2)+' j</span></div>'
+    +'<div class="sverd" style="color:'+(ok11?'var(--green)':'var(--red)')+'">'+
+      (ok11?'Encore ~'+Math.round(j11_62)+' j restants &mdash; ARE Senior accessible':'Il manque ~'+Math.round(Math.abs(j11_62))+' j pour l\'ARE Senior')
+    +'</div></div>';
+}
+
+function renderMS(){
+  const al=MFRF[asm-1]+' '+asy;
+  document.getElementById('mslist').innerHTML=
+    '<div class="msi"><div class="msd" style="background:#1A56D4"></div><div><div class="msdate">1 janv. 2026</div><div class="mstxt">Debut du pipeline AE<br><span class="mstag tbl">Pas d\'ARE avant '+al+'</span></div></div></div>'
+    +'<div class="msi"><div class="msd" style="background:#0D8B68"></div><div><div class="msdate">1 '+al+'</div><div class="mstxt">Demarrage ARE &mdash; ouverture des droits<br><span class="mstag tok">Modifiable via le selecteur</span></div></div></div>'
+    +'<div class="msi"><div class="msd" style="background:#A06000"></div><div><div class="msdate">'+al+'</div><div class="mstxt">Debut ecretement AE + ARE<br><span class="mstag tw">France Travail retient 50% AE</span></div></div></div>'
+    +'<div class="msi"><div class="msd" style="background:#D94010"></div><div><div class="msdate">1 fev. 2030</div><div class="mstxt">62 ans &mdash; seuil ARE Senior<br><span class="mstag td">Droits obligatoires a cette date</span></div></div></div>'
+    +'<div class="msi"><div class="msd" style="background:#6B3FD4"></div><div><div class="msdate">1 avr. 2032</div><div class="mstxt">RETRAITE &mdash; 64 ans<br><span class="mstag tok">Objectif final</span></div></div></div>';
+}
+
+function renderLeg(){
+  let h=acts.map((a,i)=>'<span><span class="ld" style="background:'+COLORS[i%COLORS.length]+'"></span>'+a.name+'</span>').join('');
+  h+='<span><span class="ld" style="background:#0D8B68"></span>ARE nette</span>';
+  document.getElementById('rleg').innerHTML=h;
+}
+
+function getVM(ms){
+  if(cv==='all')return ms;
+  if(cv==='2030')return ms.filter(m=>m.y>=2030);
+  return ms.filter(m=>String(m.y)===cv);
+}
+
+function updC(){saveData();
+  const ms=calcTL();
+  renderJ62(ms);renderAT(ms);renderBulles(ms);renderMS();
+  const data=getVM(ms);const labels=data.map(d=>d.label);
+  if(RC)RC.destroy();
+  const ds=acts.map((a,i)=>({label:a.name,data:data.map(d=>d.ba[i]?d.ba[i].v:0),backgroundColor:COLORS[i%COLORS.length],stack:'s'}));
+  ds.push({label:'ARE nette',data:data.map(d=>d.are),backgroundColor:'#0D8B68',stack:'s'});
+  RC=new Chart(document.getElementById('RC'),{type:'bar',data:{labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y)+' \u20ac'}}},scales:{x:{ticks:{font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:20}},y:{ticks:{callback:v=>fmt(v)+' \u20ac',font:{size:10}}}}}});
+  if(JC)JC.destroy();
+  JC=new Chart(document.getElementById('JC'),{type:'line',data:{labels,datasets:[
+    {label:'822 j',data:data.map(d=>d.j8),borderColor:'#1A56D4',fill:false,tension:.3,pointRadius:0,borderWidth:2,spanGaps:true},
+    {label:'1152 j',data:data.map(d=>d.j11),borderColor:'#0D8B68',fill:false,tension:.3,pointRadius:0,borderWidth:2,borderDash:[5,4],spanGaps:true}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.parsed.y,2)+' j'}}},scales:{x:{ticks:{font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:20}},y:{ticks:{font:{size:10}}}}}});
+}
+
+function renderAT(ms){
+  const yrs={};
+  ms.forEach(m=>{const y=String(m.y);if(!yrs[y])yrs[y]={ae:0,are:0};yrs[y].ae+=m.net;yrs[y].are+=m.are;});
+  let h='<thead><tr><th>Annee</th><th>AE nets</th><th>ARE</th><th>Total</th></tr></thead><tbody>';
+  let ta=0,tr=0;
+  Object.entries(yrs).forEach(([y,vv])=>{ta+=vv.ae;tr+=vv.are;h+='<tr><td>'+y+'</td><td>'+fmt(vv.ae)+' \u20ac</td><td>'+fmt(vv.are)+' \u20ac</td><td style="color:#E05010;font-weight:800;font-size:13px">'+fmt(vv.ae+vv.are)+' \u20ac</td></tr>';});
+  h+='<tr class="trt"><td>TOTAL</td><td>'+fmt(ta)+' \u20ac</td><td>'+fmt(tr)+' \u20ac</td><td>'+fmt(ta+tr)+' \u20ac</td></tr></tbody>';
+  document.getElementById('ytbl').innerHTML=h;
+}
+
+function setCV(v){
+  cv=v;
+  document.querySelectorAll('.cfb').forEach(b=>{b.classList.toggle('active',v==='all'?b.textContent.includes('Toutes'):b.textContent.includes(v));});
+  updC();
+}
+
+function exportCSV(){
+  const ms=calcTL();
+  let c='\uFEFF'+'Annee;Mois;'+acts.map(a=>a.name).join(';')+';Total AE brut;AE retenu FT;NET AE;ARE NETTE;CUMUL;ARE conso (j);Jours 822 j;Jours 1152 j\n';
+  ms.forEach(m=>{
+    const kk=k(m);
+    const av=acts.map(a=>String(+a.values[kk]||0).replace('.',',')).join(';');
+    c+=m.y+';'+MFRF[m.m-1]+';'+av+';'+String(m.brut).replace('.',',')+';'+String(m.ret).replace('.',',')+';'+String(m.net).replace('.',',')+';'+String(m.are).replace('.',',')+';'+String(m.cum).replace('.',',')+';'+String(m.conso).replace('.',',')+';"'+(m.j8!==null?String(m.j8).replace('.','_'):'').replace('_',',')+'";"'+(m.j11!==null?String(m.j11).replace('.','_'):'').replace('_',',')+'"\n';
+  });
+  const blob=new Blob([c],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='Pipeline_AE_ARE_GUESNE_Pierrick.csv';a.click();
+  URL.revokeObjectURL(url);
+}
+
+function renderAll(){renderPipe();updC();saveData();}
+// Sauvegarde localStorage
+function saveData(){
+  try{
+    const data={acts:acts.map(a=>({name:a.name,values:a.values,statut:a.statut})),asm,asy,sy,ts:new Date().toLocaleString('fr-FR')};
+    localStorage.setItem('pipeline_ae_are',JSON.stringify(data));
+    const el=document.getElementById('save-indicator');
+    if(el){el.textContent='Sauvegardé à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});el.style.opacity='1';setTimeout(()=>el.style.opacity='0',2000);}
+  }catch(e){}
+}
+function loadData(){
+  try{
+    const raw=localStorage.getItem('pipeline_ae_are');
+    if(!raw) return false;
+    const data=JSON.parse(raw);
+    if(data.acts&&data.acts.length>0){
+      acts=data.acts.map(a=>{
+        const nv={name:a.name,values:{},statut:{}};
+        // Compatibilité ancienne version (v/s) et nouvelle (values/statut)
+        const srcV=a.values||a.v||{};const srcS=a.statut||a.s||{};
+        TL.forEach(t=>{const k2=t.y+'-'+t.m;nv.values[k2]=+srcV[k2]||0;nv.statut[k2]=srcS[k2]==='R'?'R':'E';});
+        return nv;
+      });
+    }
+    if(data.asm) asm=data.asm;
+    if(data.asy) asy=data.asy;
+    if(data.sy) sy=data.sy;
+    return true;
+  }catch(e){return false;}
+}
+function clearData(){
+  if(confirm('Effacer toutes les données sauvegardées et repartir de zéro ?')){
+    localStorage.removeItem('pipeline_ae_are');
+    location.reload();
+  }
+}
+function exportJSON(){
+  const data={acts:acts.map(a=>({name:a.name,values:a.values,statut:a.statut})),asm,asy,sy,ts:new Date().toLocaleString('fr-FR')};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const now=new Date();
+  const dd=String(now.getDate()).padStart(2,'0');
+  const mm=String(now.getMonth()+1).padStart(2,'0');
+  const yyyy=now.getFullYear();
+  const fname=yyyy+'-'+mm+'-'+dd+'-SAUVEGARDE-Pipeline-AE-ARE.json';
+  a.href=url;a.download=fname;a.click();
+  URL.revokeObjectURL(url);
+}
+function importJSON(){
+  const input=document.createElement('input');
+  input.type='file';input.accept='.json';
+  input.onchange=e=>{
+    const file=e.target.files[0];
+    if(!file) return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const data=JSON.parse(ev.target.result);
+        if(data.acts&&data.acts.length>0){
+          acts=data.acts.map(a=>{
+            const nv={name:a.name||'Activité',values:{},statut:{}};
+            // Robuste : on initialise d'abord tous les mois à 0/E
+            TL.forEach(t=>{
+              const kk=t.y+'-'+t.m;
+              nv.values[kk]=0;
+              nv.statut[kk]='E';
+            });
+            // Puis on écrase avec les valeurs sauvegardées si elles existent
+            // Compatibilité ancienne version (v/s) et nouvelle (values/statut)
+            const srcVals = a.values || a.v || {};
+            const srcStat = a.statut || a.s || {};
+            if(typeof srcVals==='object'){
+              Object.keys(srcVals).forEach(kk=>{
+                if(nv.values.hasOwnProperty(kk)){
+                  nv.values[kk]=+srcVals[kk]||0;
+                }
+              });
+            }
+            if(typeof srcStat==='object'){
+              Object.keys(srcStat).forEach(kk=>{
+                if(nv.statut.hasOwnProperty(kk)){
+                  nv.statut[kk]=srcStat[kk]==='R'?'R':'E';
+                }
+              });
+            }
+            return nv;
+          });
+        }
+        if(data.asm){asm=+data.asm;document.getElementById('asm').value=asm;}
+        if(data.asy){asy=+data.asy;document.getElementById('asy').value=asy;}
+        if(data.sy) sy=String(data.sy);
+        const moisFR=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+        document.getElementById('areinfo').textContent='ARE active dès '+moisFR[asm-1]+' '+asy;
+        saveData();
+        renderYTabs();renderPipe();renderLeg();updC();
+        alert('Données importées avec succès !');
+      }catch(err){alert('Erreur lecture fichier : '+err.message);}
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// Init date du jour
+const d=new Date();
+const labelDate=d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+const labelHeure=d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+const el=document.getElementById('synth-date-label');
+if(el) el.textContent='au '+labelDate+' à '+labelHeure;
+// Charger données sauvegardées
+const loaded=loadData();
+if(!loaded) sy=CUR_YR;
+// Mettre à jour les sélecteurs si données chargées
+if(loaded){
+  document.getElementById('asm').value=asm;
+  document.getElementById('asy').value=asy;
+  document.getElementById('areinfo').textContent='ARE active dès '+['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][asm-1]+' '+asy;
+}
+renderYTabs();renderPipe();renderLeg();updC();
+</script>
+</body>
+</html>
