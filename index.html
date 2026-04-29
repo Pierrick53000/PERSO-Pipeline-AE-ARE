@@ -166,8 +166,25 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
 .sync-dot.error{background:#f87171}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
-.modal-overlay.open{display:flex}
-.modal-sync-inner{background:#fff;border-radius:14px;padding:28px;width:500px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-overlay.open{display:flex !important}
+.modal{background:#fff;border-radius:14px;width:540px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #e2e8f0}
+.modal-title{font-size:15px;font-weight:700;color:#0f172a}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;padding:4px 8px;border-radius:6px}
+.modal-close:hover{background:#f1f5f9;color:#0f172a}
+.modal-body{padding:20px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid #e2e8f0}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;color:#0f172a;background:#fff}
+.form-group input:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;transition:all .15s}
+.btn-primary{background:#2563eb;color:#fff}
+.btn-primary:hover{background:#1d4ed8}
+.btn-ghost{background:transparent;color:#64748b;border:1px solid #e2e8f0}
+.btn-ghost:hover{background:#f8fafc}
+--p1-bg:#eff6ff;--p1-light:#bfdbfe;--p1:#2563eb;--p2:#059669;--p2-bg:#f0fdf4;--p2-light:#a7f3d0;
+.form-group.full{grid-column:1/-1}
 </style>
 </head>
 <body>
@@ -825,7 +842,7 @@ async function gsLoad(){
 function openSyncConfig(){
   const url = getSyncUrl();
   const el = document.getElementById('gs-url-input');
-  if(el) el.value = url;
+  if(el && url) el.value = url;
   const res = document.getElementById('sync-test-result');
   if(res) res.style.display = 'none';
   document.getElementById('modal-sync').classList.add('open');
@@ -834,6 +851,10 @@ function openSyncConfig(){
 function closeSyncModal(){
   document.getElementById('modal-sync').classList.remove('open');
 }
+// Fermer en cliquant sur le fond (comme CAFPI)
+document.addEventListener('click', function(e){
+  if(e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
+});
 
 function saveSyncConfig(){
   const url = document.getElementById('gs-url-input').value.trim();
@@ -841,8 +862,9 @@ function saveSyncConfig(){
   closeSyncModal();
   if(url){
     setSyncStatus('ok','Syncé');
-    gsWrite(JSON.stringify({acts:acts.map(a=>({name:a.name,values:a.values,statut:a.statut})),asm,asy,sy}));
-    toast && toast('URL enregistrée ✓', 'success');
+    const data = {acts:acts.map(a=>({name:a.name,values:a.values,statut:a.statut})),asm,asy,sy,ts:new Date().toLocaleString('fr-FR')};
+    gsWrite(JSON.stringify(data));
+    alert('URL enregistrée ! Synchronisation active.');
   }
 }
 
@@ -892,29 +914,30 @@ renderYTabs();renderPipe();renderLeg();updC();
 </script>
 
 <!-- MODAL SYNC GOOGLE SHEETS -->
-<div class="modal-overlay" id="modal-sync" onclick="closeSyncModal()">
-  <div class="modal-sync-inner" onclick="event.stopPropagation()">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-      <div style="font-size:16px;font-weight:800;color:#1A1714">&#9881; Synchronisation Google Sheets</div>
-      <button onclick="closeSyncModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888">&times;</button>
+<div class="modal-overlay" id="modal-sync">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">⚙️ Synchronisation Google Sheets</span>
+      <button class="modal-close" onclick="closeSyncModal()">×</button>
     </div>
-    <div style="font-size:13px;color:#555;margin-bottom:16px;line-height:1.6">
-      Colle ici l'URL de ton script Google Apps Script. Les données seront synchronisées automatiquement à chaque modification.
+    <div class="modal-body">
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#64748b;line-height:1.7">
+        <strong style="color:#2563eb">Synchronisation automatique</strong><br>
+        Colle l'URL de ton script Google Apps Script. Les données se synchronisent automatiquement à chaque modification.
+      </div>
+      <div class="form-group full">
+        <label>URL du Apps Script</label>
+        <input type="text" id="gs-url-input" placeholder="https://script.google.com/macros/s/AKfycb.../exec" value="https://script.google.com/macros/s/AKfycbzfZrEIrWViXktarZkLK6F_DBZmWMbwcqjfwkzvtGRrO-vAOb_TUn4Kb7yOp1Yz_-qE/exec">
+      </div>
+      <div id="sync-test-result" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;margin-top:10px"></div>
+      <div style="margin-top:12px;padding:10px 12px;background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;font-size:12px;color:#64748b">
+        <strong style="color:#059669">Astuce</strong> — Une fois l'URL enregistrée, tes données se synchronisent automatiquement entre tous tes appareils (PC, iPhone, iPad).
+      </div>
     </div>
-    <div style="margin-bottom:16px">
-      <label style="font-size:12px;font-weight:700;color:#888;display:block;margin-bottom:6px">URL du script Google Apps Script</label>
-      <input id="gs-url-input" type="url" placeholder="https://script.google.com/macros/s/..." 
-        style="width:100%;padding:10px 12px;border:1.5px solid #DDD;border-radius:8px;font-size:13px;font-family:inherit">
-    </div>
-    <div style="background:#FFF8E8;border:1.5px solid #F0C030;border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:#7A5000">
-      <strong>&#9888; Comment obtenir cette URL ?</strong><br>
-      Suis les étapes dans le guide fourni par Claude pour créer ton Google Sheet et ton script Apps Script.
-    </div>
-    <div id="sync-test-result" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;margin-bottom:12px"></div>
-    <div style="display:flex;gap:10px;justify-content:flex-end">
-      <button onclick="testSync()" style="padding:8px 18px;border:1.5px solid #DDD;border-radius:8px;background:#fff;font-size:13px;font-weight:700;cursor:pointer">&#128266; Tester</button>
-      <button onclick="closeSyncModal()" style="padding:8px 18px;border:1.5px solid #DDD;border-radius:8px;background:#fff;font-size:13px;font-weight:700;cursor:pointer">Annuler</button>
-      <button onclick="saveSyncConfig()" style="padding:8px 18px;border:none;border-radius:8px;background:#FF6B35;color:#fff;font-size:13px;font-weight:800;cursor:pointer">&#10003; Enregistrer</button>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="testSync()">🔊 Tester</button>
+      <button class="btn btn-ghost" onclick="closeSyncModal()">Fermer</button>
+      <button class="btn btn-primary" onclick="saveSyncConfig()">✓ Enregistrer</button>
     </div>
   </div>
 </div>
