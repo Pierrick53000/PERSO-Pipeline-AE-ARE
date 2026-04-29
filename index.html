@@ -157,6 +157,14 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
 .enote{font-size:11px;color:#AAA}
 
 @media(max-width:700px){.kpi-grid,.bgrid{grid-template-columns:repeat(2,1fr)}.sgrid,.bgrid2{grid-template-columns:1fr}}
+
+.sync-btn{font-size:11px;font-weight:800;padding:6px 13px;border-radius:8px;border:2px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);color:#fff;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s}
+.sync-btn:hover{background:rgba(255,255,255,.25)}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#aaa;flex-shrink:0}
+.sync-dot.ok{background:#4ade80}
+.sync-dot.loading{background:#fbbf24;animation:pulse .8s infinite}
+.sync-dot.error{background:#f87171}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 </style>
 </head>
 <body>
@@ -170,6 +178,7 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
     <span class="bpill">Estim&eacute; = gris normal</span>
     <button onclick="importJSON()" style="font-size:12px;font-weight:800;padding:7px 16px;border-radius:8px;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.18);color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px">&#128228; Charger</button>
     <button onclick="exportJSON()" style="font-size:12px;font-weight:800;padding:7px 16px;border-radius:8px;border:2px solid #fff;background:#fff;color:#E05010;cursor:pointer;display:flex;align-items:center;gap:6px">&#128190; Sauvegarder</button>
+    <button class="sync-btn" onclick="openSyncConfig()" title="Synchronisation Google Sheets"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Sync GS</span></button>
   </div>
 </div>
 <div class="layout">
@@ -630,6 +639,11 @@ function saveData(){
   try{
     const data={acts:acts.map(a=>({name:a.name,values:a.values,statut:a.statut})),asm,asy,sy,ts:new Date().toLocaleString('fr-FR')};
     localStorage.setItem('pipeline_ae_are',JSON.stringify(data));
+    // Sync GS avec debounce 2s
+    if(getSyncUrl()){
+      clearTimeout(gsSyncTimer);
+      gsSyncTimer=setTimeout(()=>gsWrite(JSON.stringify(data)),2000);
+    }
     const el=document.getElementById('save-indicator');
     if(el){el.textContent='Sauvegardé à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});el.style.opacity='1';setTimeout(()=>el.style.opacity='0',2000);}
   }catch(e){}
@@ -728,14 +742,138 @@ function importJSON(){
   input.click();
 }
 
+// Init (async pour Google Sheets)
+(async()=>{
+// Pré-configurer l'URL GS si pas déjà fait
+if(!localStorage.getItem('ae_are_gs_url')){
+  localStorage.setItem('ae_are_gs_url','https://script.google.com/macros/s/AKfycbzfZrEIrWViXktarZkLK6F_DBZmWMbwcqjfwkzvtGRrO-vAOb_TUn4Kb7yOp1Yz_-qE/exec');
+}
+
 // Init date du jour
 const d=new Date();
 const labelDate=d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
 const labelHeure=d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
 const el=document.getElementById('synth-date-label');
 if(el) el.textContent='au '+labelDate+' à '+labelHeure;
+// ─── SYNC GOOGLE SHEETS ───────────────────────────────────────────────────────
+let gsSyncTimer = null;
+let gsSyncing = false;
+
+function getSyncUrl(){
+  return localStorage.getItem('ae_are_gs_url') || '';
+}
+
+function setSyncStatus(status, label){
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  if(!dot) return;
+  dot.className = 'sync-dot ' + (status==='ok'?'ok':status==='loading'?'loading':status==='error'?'error':'');
+  if(lbl) lbl.textContent = label || 'Sync GS';
+}
+
+async function gsWrite(payload){
+  const url = getSyncUrl();
+  if(!url) return;
+  setSyncStatus('loading','Sync...');
+  try{
+    await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: payload,
+      mode:'no-cors'
+    });
+    setSyncStatus('ok','Syncé');
+    setTimeout(()=>setSyncStatus('ok','Sync GS'),3000);
+  } catch(e){
+    setSyncStatus('error','Erreur sync');
+  }
+}
+
+async function gsLoad(){
+  const url = getSyncUrl();
+  if(!url) return false;
+  setSyncStatus('loading','Chargement...');
+  try{
+    const r = await fetch(url + '?action=read', {mode:'cors'});
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    if(data && data.acts){
+      acts = data.acts.map(a=>{
+        const nv={name:a.name||'Activite',values:{},statut:{}};
+        const srcV=a.values||a.v||{};
+        const srcS=a.statut||a.s||{};
+        TL.forEach(t=>{const kk=t.y+'-'+t.m;nv.values[kk]=+srcV[kk]||0;nv.statut[kk]=srcS[kk]==='R'?'R':'E';});
+        return nv;
+      });
+      if(data.asm) asm=+data.asm;
+      if(data.asy) asy=+data.asy;
+      if(data.sy)  sy=String(data.sy);
+      setSyncStatus('ok','Syncé');
+      return true;
+    }
+    setSyncStatus('ok','Sync GS');
+    return false;
+  } catch(e){
+    setSyncStatus('error','Erreur sync');
+    return false;
+  }
+}
+
+function openSyncConfig(){
+  const url = getSyncUrl();
+  document.getElementById('gs-url-input').value = url;
+  document.getElementById('sync-test-result').style.display = 'none';
+  document.getElementById('modal-sync').style.display = 'flex';
+}
+
+function closeSyncModal(){
+  document.getElementById('modal-sync').style.display = 'none';
+}
+
+function saveSyncConfig(){
+  const url = document.getElementById('gs-url-input').value.trim();
+  localStorage.setItem('ae_are_gs_url', url);
+  closeSyncModal();
+  if(url){
+    setSyncStatus('ok','Syncé');
+    gsWrite(JSON.stringify({acts:acts.map(a=>({name:a.name,values:a.values,statut:a.statut})),asm,asy,sy}));
+    toast && toast('URL enregistrée ✓', 'success');
+  }
+}
+
+async function testSync(){
+  const url = document.getElementById('gs-url-input').value.trim();
+  const res = document.getElementById('sync-test-result');
+  if(!url){ res.style.display='block';res.style.background='#FFF0EE';res.style.color='#C02010';res.textContent='URL vide !';return; }
+  res.style.display='block';res.style.background='#FFFAE8';res.style.color='#7A5000';res.textContent='Test en cours...';
+  try{
+    const r = await fetch(url + '?action=ping', {mode:'cors'});
+    const data = await r.json();
+    if(data && data.status==='ok'){
+      res.style.background='#E8FFF0';res.style.color='#0A7040';
+      res.textContent='✓ Connexion OK ! Google Sheet trouvé.';
+    } else {
+      res.style.background='#FFF0EE';res.style.color='#C02010';
+      res.textContent='Réponse inattendue : ' + JSON.stringify(data);
+    }
+  } catch(e){
+    res.style.background='#FFF0EE';res.style.color='#C02010';
+    res.textContent='Erreur : ' + e.message + ' (vérifie que le script est déployé en accès public)';
+  }
+}
+
+// ─── FIN SYNC ──────────────────────────────────────────────────────────────────
+
 // Charger données sauvegardées
-const loaded=loadData();
+// Essayer de charger depuis Google Sheets d'abord, sinon localStorage
+const gsUrl = getSyncUrl();
+let loaded = false;
+if(gsUrl){
+  try{
+    loaded = await gsLoad();
+  } catch(e){}
+}
+if(!loaded) loaded = loadData();
 if(!loaded) sy=CUR_YR;
 // Mettre à jour les sélecteurs si données chargées
 if(loaded){
@@ -744,6 +882,37 @@ if(loaded){
   document.getElementById('areinfo').textContent='ARE active dès '+['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'][asm-1]+' '+asy;
 }
 renderYTabs();renderPipe();renderLeg();updC();
+
+})(); // fin async init
 </script>
+
+<!-- MODAL SYNC GOOGLE SHEETS -->
+<div id="modal-sync" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:28px;width:500px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:800;color:#1A1714">&#9881; Synchronisation Google Sheets</div>
+      <button onclick="closeSyncModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888">&times;</button>
+    </div>
+    <div style="font-size:13px;color:#555;margin-bottom:16px;line-height:1.6">
+      Colle ici l'URL de ton script Google Apps Script. Les données seront synchronisées automatiquement à chaque modification.
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:12px;font-weight:700;color:#888;display:block;margin-bottom:6px">URL du script Google Apps Script</label>
+      <input id="gs-url-input" type="url" placeholder="https://script.google.com/macros/s/..." 
+        style="width:100%;padding:10px 12px;border:1.5px solid #DDD;border-radius:8px;font-size:13px;font-family:inherit">
+    </div>
+    <div style="background:#FFF8E8;border:1.5px solid #F0C030;border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:#7A5000">
+      <strong>&#9888; Comment obtenir cette URL ?</strong><br>
+      Suis les étapes dans le guide fourni par Claude pour créer ton Google Sheet et ton script Apps Script.
+    </div>
+    <div id="sync-test-result" style="display:none;padding:10px 12px;border-radius:8px;font-size:12px;margin-bottom:12px"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="testSync()" style="padding:8px 18px;border:1.5px solid #DDD;border-radius:8px;background:#fff;font-size:13px;font-weight:700;cursor:pointer">&#128266; Tester</button>
+      <button onclick="closeSyncModal()" style="padding:8px 18px;border:1.5px solid #DDD;border-radius:8px;background:#fff;font-size:13px;font-weight:700;cursor:pointer">Annuler</button>
+      <button onclick="saveSyncConfig()" style="padding:8px 18px;border:none;border-radius:8px;background:#FF6B35;color:#fff;font-size:13px;font-weight:800;cursor:pointer">&#10003; Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
