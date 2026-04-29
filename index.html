@@ -158,13 +158,16 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
 
 @media(max-width:700px){.kpi-grid,.bgrid{grid-template-columns:repeat(2,1fr)}.sgrid,.bgrid2{grid-template-columns:1fr}}
 
-.sync-btn{font-size:11px;font-weight:800;padding:6px 13px;border-radius:8px;border:2px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);color:#fff;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s}
+.sync-btn{font-size:11px;font-weight:800;padding:6px 13px;border-radius:8px;border:2px solid rgba(255,255,255,.4);background:rgba(255,255,255,.15);color:#fff;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .15s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .sync-btn:hover{background:rgba(255,255,255,.25)}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:#aaa;flex-shrink:0}
 .sync-dot.ok{background:#4ade80}
 .sync-dot.loading{background:#fbbf24;animation:pulse .8s infinite}
 .sync-dot.error{background:#f87171}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.modal-overlay.open{display:flex}
+.modal-sync-inner{background:#fff;border-radius:14px;padding:28px;width:500px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
 </style>
 </head>
 <body>
@@ -822,20 +825,14 @@ async function gsLoad(){
 function openSyncConfig(){
   const url = getSyncUrl();
   const el = document.getElementById('gs-url-input');
-  const modal = document.getElementById('modal-sync');
   if(el) el.value = url;
   const res = document.getElementById('sync-test-result');
   if(res) res.style.display = 'none';
-  if(modal){
-    modal.style.display = 'flex';
-    modal.style.alignItems = 'center';
-    modal.style.justifyContent = 'center';
-  }
+  document.getElementById('modal-sync').classList.add('open');
 }
 
 function closeSyncModal(){
-  const modal = document.getElementById('modal-sync');
-  if(modal) modal.style.display = 'none';
+  document.getElementById('modal-sync').classList.remove('open');
 }
 
 function saveSyncConfig(){
@@ -895,8 +892,8 @@ renderYTabs();renderPipe();renderLeg();updC();
 </script>
 
 <!-- MODAL SYNC GOOGLE SHEETS -->
-<div id="modal-sync" onclick="closeSyncModal()" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch">
-  <div style="background:#fff;border-radius:14px;padding:28px;width:500px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)" onclick="event.stopPropagation()">
+<div class="modal-overlay" id="modal-sync" onclick="closeSyncModal()">
+  <div class="modal-sync-inner" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <div style="font-size:16px;font-weight:800;color:#1A1714">&#9881; Synchronisation Google Sheets</div>
       <button onclick="closeSyncModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888">&times;</button>
