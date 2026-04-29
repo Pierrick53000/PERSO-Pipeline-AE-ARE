@@ -178,7 +178,7 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
     <span class="bpill">Estim&eacute; = gris normal</span>
     <button onclick="importJSON()" style="font-size:12px;font-weight:800;padding:7px 16px;border-radius:8px;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.18);color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px">&#128228; Charger</button>
     <button onclick="exportJSON()" style="font-size:12px;font-weight:800;padding:7px 16px;border-radius:8px;border:2px solid #fff;background:#fff;color:#E05010;cursor:pointer;display:flex;align-items:center;gap:6px">&#128190; Sauvegarder</button>
-    <button class="sync-btn" onclick="openSyncConfig()" title="Synchronisation Google Sheets"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Sync GS</span></button>
+    <button class="sync-btn" onclick="openSyncConfig()" title="Synchronisation Google Sheets" style="cursor:pointer;-webkit-tap-highlight-color:rgba(255,255,255,.3);touch-action:manipulation"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Sync GS</span></button>
   </div>
 </div>
 <div class="layout">
@@ -821,13 +821,21 @@ async function gsLoad(){
 
 function openSyncConfig(){
   const url = getSyncUrl();
-  document.getElementById('gs-url-input').value = url;
-  document.getElementById('sync-test-result').style.display = 'none';
-  document.getElementById('modal-sync').style.display = 'flex';
+  const el = document.getElementById('gs-url-input');
+  const modal = document.getElementById('modal-sync');
+  if(el) el.value = url;
+  const res = document.getElementById('sync-test-result');
+  if(res) res.style.display = 'none';
+  if(modal){
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+  }
 }
 
 function closeSyncModal(){
-  document.getElementById('modal-sync').style.display = 'none';
+  const modal = document.getElementById('modal-sync');
+  if(modal) modal.style.display = 'none';
 }
 
 function saveSyncConfig(){
@@ -887,8 +895,8 @@ renderYTabs();renderPipe();renderLeg();updC();
 </script>
 
 <!-- MODAL SYNC GOOGLE SHEETS -->
-<div id="modal-sync" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center">
-  <div style="background:#fff;border-radius:14px;padding:28px;width:500px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+<div id="modal-sync" onclick="closeSyncModal()" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch">
+  <div style="background:#fff;border-radius:14px;padding:28px;width:500px;max-width:92vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <div style="font-size:16px;font-weight:800;color:#1A1714">&#9881; Synchronisation Google Sheets</div>
       <button onclick="closeSyncModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888">&times;</button>
