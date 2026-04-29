@@ -165,8 +165,15 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
 .sync-dot.loading{background:#fbbf24;animation:pulse .8s infinite}
 .sync-dot.error{background:#f87171}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
-.modal-overlay.open{display:flex !important}
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+  display: none;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.open { display: flex; }
 .modal{background:#fff;border-radius:14px;width:540px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
 .modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid #e2e8f0}
 .modal-title{font-size:15px;font-weight:700;color:#0f172a}
@@ -198,7 +205,7 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
     <span class="bpill">Estim&eacute; = gris normal</span>
     <button onclick="importJSON()" style="font-size:12px;font-weight:800;padding:7px 16px;border-radius:8px;border:2px solid rgba(255,255,255,.5);background:rgba(255,255,255,.18);color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px">&#128228; Charger</button>
     <button onclick="exportJSON()" style="font-size:12px;font-weight:800;padding:7px 16px;border-radius:8px;border:2px solid #fff;background:#fff;color:#E05010;cursor:pointer;display:flex;align-items:center;gap:6px">&#128190; Sauvegarder</button>
-    <a href="javascript:void(0)" onclick="openSyncConfig();return false;" ontouchstart="openSyncConfig();return false;" class="sync-btn" title="Synchronisation Google Sheets" style="text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:rgba(255,255,255,.3);touch-action:manipulation;user-select:none"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Sync GS</span></a>
+    <button class="sync-btn" onclick="openSyncConfig()" title="Synchronisation Google Sheets"><span class="sync-dot" id="sync-dot"></span><span id="sync-label">Sync GS</span></button>
   </div>
 </div>
 <div class="layout">
