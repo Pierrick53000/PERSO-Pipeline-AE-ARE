@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -676,6 +675,11 @@ function saveData(){
     localStorage.setItem('pipeline_ae_are',JSON.stringify(data));
     const el=document.getElementById('save-indicator');
     if(el){el.textContent='Sauvegardé à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});el.style.opacity='1';setTimeout(()=>el.style.opacity='0',2000);}
+    // Sync Google Sheets avec debounce 2 secondes
+    if(getSyncUrl()){
+      clearTimeout(gsSyncTimer);
+      gsSyncTimer = setTimeout(() => gsWrite(JSON.stringify(data)), 2000);
+    }
   }catch(e){}
 }
 function loadData(){
