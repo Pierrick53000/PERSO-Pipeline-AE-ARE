@@ -667,6 +667,109 @@ function exportCSV(){
   URL.revokeObjectURL(url);
 }
 
+
+// ─── SYNC GOOGLE SHEETS ───────────────────────────────────────────────────────
+let gsSyncTimer = null;
+const GS_URL_KEY = 'ae_are_gs_url';
+
+function getSyncUrl() {
+  return localStorage.getItem(GS_URL_KEY) || '';
+}
+
+function setSyncStatus(status, label) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  if (dot) dot.className = 'sync-dot ' + status;
+  if (lbl) lbl.textContent = label || 'Sync GS';
+}
+
+async function gsWrite(payload) {
+  const url = getSyncUrl();
+  if (!url) return;
+  setSyncStatus('loading', 'Sync...');
+  try {
+    await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: payload, mode: 'no-cors' });
+    setSyncStatus('ok', 'Syncé');
+    setTimeout(() => setSyncStatus('ok', 'Sync GS'), 3000);
+  } catch(e) {
+    setSyncStatus('error', 'Erreur');
+  }
+}
+
+async function gsLoad() {
+  const url = getSyncUrl();
+  if (!url) return false;
+  setSyncStatus('loading', 'Chargement...');
+  try {
+    const r = await fetch(url + '?action=read', { mode: 'cors' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    if (data && data.acts) {
+      acts = data.acts.map(a => {
+        const nv = {name: a.name||'Activite', values: {}, statut: {}};
+        const sv = a.values||a.v||{};
+        const ss = a.statut||a.s||{};
+        TL.forEach(t => { const kk=t.y+'-'+t.m; nv.values[kk]=+sv[kk]||0; nv.statut[kk]=ss[kk]==='R'?'R':'E'; });
+        return nv;
+      });
+      if (data.asm) asm = +data.asm;
+      if (data.asy) asy = +data.asy;
+      if (data.sy) sy = String(data.sy);
+      setSyncStatus('ok', 'Syncé');
+      return true;
+    }
+    setSyncStatus('ok', 'Sync GS');
+    return false;
+  } catch(e) {
+    setSyncStatus('error', 'Erreur');
+    return false;
+  }
+}
+
+function openSyncConfig() {
+  const url = getSyncUrl();
+  const el = document.getElementById('gs-url-input');
+  if (el && url) el.value = url;
+  const msg = document.getElementById('sync-test-msg');
+  if (msg) msg.style.display = 'none';
+  document.getElementById('modal-sync').classList.add('open');
+}
+
+function closeSyncConfig() {
+  document.getElementById('modal-sync').classList.remove('open');
+}
+
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
+});
+
+function saveSyncConfig() {
+  const url = document.getElementById('gs-url-input').value.trim();
+  localStorage.setItem(GS_URL_KEY, url);
+  closeSyncConfig();
+  if (url) {
+    setSyncStatus('ok', 'Syncé');
+    const data = {acts: acts.map(a => ({name:a.name,values:a.values,statut:a.statut})),asm,asy,sy,ts:new Date().toLocaleString('fr-FR')};
+    gsWrite(JSON.stringify(data));
+  }
+}
+
+async function testSyncConfig() {
+  const url = document.getElementById('gs-url-input').value.trim();
+  const msg = document.getElementById('sync-test-msg');
+  if (!url) { msg.style.display='block'; msg.style.background='#FFF0EE'; msg.style.color='#C02010'; msg.textContent='URL vide !'; return; }
+  msg.style.display='block'; msg.style.background='#FFFAE8'; msg.style.color='#7A5000'; msg.textContent='Test en cours...';
+  try {
+    const r = await fetch(url + '?action=ping', { mode: 'cors' });
+    const data = await r.json();
+    msg.style.background='#E8FFF0'; msg.style.color='#0A7040';
+    msg.textContent = '✓ Connexion OK !';
+  } catch(e) {
+    msg.style.background='#FFF0EE'; msg.style.color='#C02010';
+    msg.textContent = 'Erreur : ' + e.message;
+  }
+}
+// ─── FIN SYNC ─────────────────────────────────────────────────────────────────
 function renderAll(){renderPipe();updC();saveData();}
 // Sauvegarde localStorage
 function saveData(){
@@ -783,108 +886,6 @@ const labelHeure=d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})
 const el=document.getElementById('synth-date-label');
 if(el) el.textContent='au '+labelDate+' à '+labelHeure;
 
-// ─── SYNC GOOGLE SHEETS ───────────────────────────────────────────────────────
-let gsSyncTimer = null;
-const GS_URL_KEY = 'ae_are_gs_url';
-
-function getSyncUrl() {
-  return localStorage.getItem(GS_URL_KEY) || '';
-}
-
-function setSyncStatus(status, label) {
-  const dot = document.getElementById('sync-dot');
-  const lbl = document.getElementById('sync-label');
-  if (dot) dot.className = 'sync-dot ' + status;
-  if (lbl) lbl.textContent = label || 'Sync GS';
-}
-
-async function gsWrite(payload) {
-  const url = getSyncUrl();
-  if (!url) return;
-  setSyncStatus('loading', 'Sync...');
-  try {
-    await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: payload, mode: 'no-cors' });
-    setSyncStatus('ok', 'Syncé');
-    setTimeout(() => setSyncStatus('ok', 'Sync GS'), 3000);
-  } catch(e) {
-    setSyncStatus('error', 'Erreur');
-  }
-}
-
-async function gsLoad() {
-  const url = getSyncUrl();
-  if (!url) return false;
-  setSyncStatus('loading', 'Chargement...');
-  try {
-    const r = await fetch(url + '?action=read', { mode: 'cors' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
-    if (data && data.acts) {
-      acts = data.acts.map(a => {
-        const nv = {name: a.name||'Activite', values: {}, statut: {}};
-        const sv = a.values||a.v||{};
-        const ss = a.statut||a.s||{};
-        TL.forEach(t => { const kk=t.y+'-'+t.m; nv.values[kk]=+sv[kk]||0; nv.statut[kk]=ss[kk]==='R'?'R':'E'; });
-        return nv;
-      });
-      if (data.asm) asm = +data.asm;
-      if (data.asy) asy = +data.asy;
-      if (data.sy) sy = String(data.sy);
-      setSyncStatus('ok', 'Syncé');
-      return true;
-    }
-    setSyncStatus('ok', 'Sync GS');
-    return false;
-  } catch(e) {
-    setSyncStatus('error', 'Erreur');
-    return false;
-  }
-}
-
-function openSyncConfig() {
-  const url = getSyncUrl();
-  const el = document.getElementById('gs-url-input');
-  if (el && url) el.value = url;
-  const msg = document.getElementById('sync-test-msg');
-  if (msg) msg.style.display = 'none';
-  document.getElementById('modal-sync').classList.add('open');
-}
-
-function closeSyncConfig() {
-  document.getElementById('modal-sync').classList.remove('open');
-}
-
-document.addEventListener('click', function(e) {
-  if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
-});
-
-function saveSyncConfig() {
-  const url = document.getElementById('gs-url-input').value.trim();
-  localStorage.setItem(GS_URL_KEY, url);
-  closeSyncConfig();
-  if (url) {
-    setSyncStatus('ok', 'Syncé');
-    const data = {acts: acts.map(a => ({name:a.name,values:a.values,statut:a.statut})),asm,asy,sy,ts:new Date().toLocaleString('fr-FR')};
-    gsWrite(JSON.stringify(data));
-  }
-}
-
-async function testSyncConfig() {
-  const url = document.getElementById('gs-url-input').value.trim();
-  const msg = document.getElementById('sync-test-msg');
-  if (!url) { msg.style.display='block'; msg.style.background='#FFF0EE'; msg.style.color='#C02010'; msg.textContent='URL vide !'; return; }
-  msg.style.display='block'; msg.style.background='#FFFAE8'; msg.style.color='#7A5000'; msg.textContent='Test en cours...';
-  try {
-    const r = await fetch(url + '?action=ping', { mode: 'cors' });
-    const data = await r.json();
-    msg.style.background='#E8FFF0'; msg.style.color='#0A7040';
-    msg.textContent = '✓ Connexion OK !';
-  } catch(e) {
-    msg.style.background='#FFF0EE'; msg.style.color='#C02010';
-    msg.textContent = 'Erreur : ' + e.message;
-  }
-}
-// ─── FIN SYNC ─────────────────────────────────────────────────────────────────
 
 // Charger données depuis GS ou localStorage
 (async()=>{
