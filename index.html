@@ -700,30 +700,45 @@ async function gsLoad() {
   const url = getSyncUrl();
   if (!url) return false;
   setSyncStatus('loading', 'Chargement...');
-  try {
-    const r = await fetch(url + '?action=read', { mode: 'cors' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
-    if (data && data.acts) {
-      acts = data.acts.map(a => {
-        const nv = {name: a.name||'Activite', values: {}, statut: {}};
-        const sv = a.values||a.v||{};
-        const ss = a.statut||a.s||{};
-        TL.forEach(t => { const kk=t.y+'-'+t.m; nv.values[kk]=+sv[kk]||0; nv.statut[kk]=ss[kk]==='R'?'R':'E'; });
-        return nv;
-      });
-      if (data.asm) asm = +data.asm;
-      if (data.asy) asy = +data.asy;
-      if (data.sy) sy = String(data.sy);
-      setSyncStatus('ok', 'Syncé');
-      return true;
-    }
-    setSyncStatus('ok', 'Sync GS');
-    return false;
-  } catch(e) {
-    setSyncStatus('error', 'Erreur');
-    return false;
-  }
+  return new Promise((resolve) => {
+    const cbName = '_gscb_' + Date.now();
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      setSyncStatus('error', 'Erreur');
+      script.remove();
+      delete window[cbName];
+      resolve(false);
+    }, 8000);
+    window[cbName] = function(data) {
+      clearTimeout(timer);
+      script.remove();
+      delete window[cbName];
+      try {
+        if (data && data.acts) {
+          acts = data.acts.map(a => {
+            const nv = {name: a.name||'Activite', values: {}, statut: {}};
+            const sv = a.values||a.v||{};
+            const ss = a.statut||a.s||{};
+            TL.forEach(t => { const kk=t.y+'-'+t.m; nv.values[kk]=+sv[kk]||0; nv.statut[kk]=ss[kk]==='R'?'R':'E'; });
+            return nv;
+          });
+          if (data.asm) asm = +data.asm;
+          if (data.asy) asy = +data.asy;
+          if (data.sy) sy = String(data.sy);
+          setSyncStatus('ok', 'Syncé');
+          resolve(true);
+        } else {
+          setSyncStatus('ok', 'Sync GS');
+          resolve(false);
+        }
+      } catch(e) {
+        setSyncStatus('error', 'Erreur');
+        resolve(false);
+      }
+    };
+    script.src = url + '?action=read&callback=' + cbName + '&t=' + Date.now();
+    document.head.appendChild(script);
+  });
 }
 
 function openSyncConfig() {
