@@ -86,6 +86,7 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
 .r6 td{background:#FFF3DC;color:#905800;font-weight:600}.r6 td.lbl{background:#FFF3DC;color:#905800}
 .r7 td{background:#FFEAE4;color:#B03008;font-weight:800;font-size:13px}.r7 td.lbl{background:#FFEAE4;color:#B03008}
 .r8 td{background:#E0F8EC;color:#077040;font-weight:800;font-size:13px}.r8 td.lbl{background:#E0F8EC;color:#077040}
+.rdeg td{background:#FFF0E0;color:#C06000;font-weight:700;font-size:11px;border-top:2px dashed #F0A830}.rdeg td.lbl{background:#FFF0E0;color:#C06000}
 .atc{text-align:right;font-size:12px;font-weight:800;font-family:'JetBrains Mono',monospace;padding:0 10px;white-space:nowrap;color:#333}
 .delbtn{font-size:11px;padding:2px 8px;border:1.5px solid #DDD;border-radius:5px;background:transparent;color:#BBB;cursor:pointer;font-weight:700}
 .delbtn:hover{background:#FFF0F0;color:#CC2020;border-color:#F0A0A0}
@@ -218,7 +219,7 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
 <div class="layout">
 
 <div class="kpi-grid">
-  <div class="kpi k1"><div class="kl">ARE journali&egrave;re</div><div class="kv">97 &euro;/j</div><div class="ks">2 910 &euro; nets/mois</div></div>
+  <div class="kpi k1"><div class="kl">ARE journali&egrave;re</div><div class="kv">97,32 &euro;/j</div><div class="ks">2 919,60 &euro;/mois &rarr; 2 431,80 apr&egrave;s 183 j</div></div>
   <div class="kpi k2"><div class="kl">Droits acquis &mdash; ATMP 53</div><div class="kv">822 j</div><div class="ks">base initiale</div></div>
   <div class="kpi k3"><div class="kl">Droits acquis + Boucles 53</div><div class="kv">1&thinsp;152 j</div><div class="ks">+ 330 j rechargement</div></div>
   <div class="kpi k4"><div class="kl">Retraite cible</div><div class="kv">1 avr. 2032</div><div class="ks">64 ans</div></div>
@@ -248,7 +249,7 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
 <div class="crit">
   <div class="crit-title">&#9888; Date cible critique &mdash; 1er f&eacute;vrier 2030 (62 ans)</div>
   <div class="crit-body">
-    <div class="crit-text">Pour l&apos;ARE Senior, tu dois imp&eacute;rativement &ecirc;tre encore indemnis&eacute; &agrave; cette date.</div>
+    <div class="crit-text">Pour l&apos;ARE Senior, tu dois imp&eacute;rativement &ecirc;tre encore indemnis&eacute; &agrave; cette date. &bull; D&eacute;gressivit&eacute; au 183&egrave;me jour consomm&eacute; : ARE passe &agrave; 81,06 &euro;/j.</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap" id="j62stats"></div>
   </div>
 </div>
@@ -320,7 +321,15 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
 </div>
 <script>
 const COLORS=['#1A56D4','#D94010','#6B3FD4','#A06000','#C2186E','#0D8B68','#1D9E75','#5A6282'];
-const ARE_DAY=97,ARE_MONTH=2970,J_BASE=822,J_BOUCLES=1152,CHARGES=0.23;
+const ARE_DAY1=97.32,ARE_MONTH1=2919.60;   // ARE avant dégressivité
+const ARE_DAY2=81.06,ARE_MONTH2=2431.80;   // ARE après dégressivité (183ème jour consommé)
+const SEUIL_DEG=183;                        // Seuil dégressivité en jours consommés
+const ABAT_MICRO=0.50;                      // Abattement micro-entrepreneur BIC/BNC
+const TAUX_ECRÊT=0.70;                     // Taux écrêtement France Travail
+const J_BASE=822,J_BOUCLES=1152,CHARGES=0.23;
+const JOURS_DEMARRAGE=20;                   // Jours ARE au 1er mois (12 au 31 mai = 20 jours)
+// Alias pour compatibilité
+const ARE_DAY=ARE_DAY1,ARE_MONTH=ARE_MONTH1;
 const MFR=['Jan','Fev','Mar','Avr','Mai','Jun','Jul','Aou','Sep','Oct','Nov','Dec'];
 const MFRF=['Janvier','Fevrier','Mars','Avril','Mai','Juin','Juillet','Aout','Septembre','Octobre','Novembre','Decembre'];
 const TL=[];
@@ -369,25 +378,42 @@ function isA(y,m){return y>asy||(y===asy&&m>=asm);}
 function fmt(n,d=0){if(n===null||n===undefined)return'---';const v=parseFloat(n);if(isNaN(v))return'---';return v.toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d});}
 
 function calcTL(){
-  // Formule exacte conforme Excel:
-  // ARE_plafond = 97 * 30 = 2910 euros/mois (base 30 jours)
-  // AE_RETENU = AE_brut * 0.5
-  // ARE_NETTE = max(0, 2910 - AE_RETENU)
-  // CONSO_jours = ARE_NETTE / 99  (= ARE_NETTE * 30 / 2970)
-  const ARE_PLAFOND = 2910; // 97 * 30
-  const DIVISEUR_CONSO = 99; // 2970 / 30
-  let j8=J_BASE,j11=J_BOUCLES;
+  // Formules France Travail officielles (courrier du 11/05/2026) :
+  // AE_RETENU = CA * abattement_micro(50%) * taux_écrêtement(70%) = CA * 0.35
+  // ARE_NETTE = max(0, ARE_mensuelle - AE_RETENU)
+  // CONSO_jours = ARE_NETTE / ARE_journalière
+  // Dégressivité au 183ème jour CONSOMMÉ :
+  //   - Avant : ARE_DAY1 = 97.32 €/j, ARE_MONTH1 = 2919.60 €/mois
+  //   - Après : ARE_DAY2 = 81.06 €/j, ARE_MONTH2 = 2431.80 €/mois
+  let j8=J_BASE, j11=J_BOUCLES;
+  let joursConsTot=0; // cumul jours consommés pour dégressivité
   return TL.map(t=>{
     const kk=k(t);
     const brut=acts.reduce((s,a)=>s+(+a.values[kk]||0),0);
     const ok=isA(t.y,t.m);
-    const ret=ok?Math.round(brut*0.5*100)/100:0;
     const net=Math.round(brut*(1-CHARGES)*100)/100;
-    const are=ok?Math.round(Math.max(0,ARE_PLAFOND-ret)*100)/100:0;
-    const conso=ok?Math.round(are/DIVISEUR_CONSO*10000)/10000:0;
+    let are=0, conso=0, ret=0;
+    if(ok){
+      // Écrêtement : abattement micro 50% puis 70% FT
+      ret=Math.round(brut*ABAT_MICRO*TAUX_ECRÊT*100)/100;
+      // ARE selon dégressivité
+      const areM = joursConsTot >= SEUIL_DEG ? ARE_MONTH2 : ARE_MONTH1;
+      const areJ = joursConsTot >= SEUIL_DEG ? ARE_DAY2   : ARE_DAY1;
+      // Prorata premier mois : si c'est exactement le mois/année de démarrage ARE
+      const isPremierMois = (t.y===asy && t.m===asm);
+      const nbJours = isPremierMois ? JOURS_DEMARRAGE : 30;
+      const areM_pro = Math.round(areJ * nbJours * 100) / 100;
+      const ret_pro = Math.round(ret * nbJours / 30 * 100) / 100;
+      are=Math.round(Math.max(0, areM_pro - ret_pro)*100)/100;
+      conso=Math.round(are/areJ*10000)/10000;
+      joursConsTot=Math.round((joursConsTot+conso)*10000)/10000;
+      j8=Math.round((j8-conso)*10000)/10000;
+      j11=Math.round((j11-conso)*10000)/10000;
+    }
     const cum=Math.round((net+are)*100)/100;
-    if(ok){j8=Math.round((j8-conso)*10000)/10000;j11=Math.round((j11-conso)*10000)/10000;}
-    return{...t,brut,ret,net,are,cum,conso,ok,
+    // Indicateur dégressivité atteinte ce mois
+    const deg = ok && joursConsTot >= SEUIL_DEG && (joursConsTot - conso) < SEUIL_DEG;
+    return{...t,brut,ret,net,are,cum,conso,ok,deg,joursConsTot:ok?joursConsTot:null,
       j8:ok?j8:null,j11:ok?j11:null,
       ba:acts.map(a=>({v:Math.round((+a.values[kk]||0)*(1-CHARGES)*100)/100,r:a.statut[kk]==='R'}))};
   });
@@ -456,11 +482,12 @@ function renderPipe(){
   h+='<tr class="csep"><td colspan="'+(fm.length+3)+'">Calculs automatiques</td></tr>';
   const rows=[
     {cls:'r1',lbl:'Total AE brut',get:d=>d.brut,suf:' \u20ac',dec:0,tot:true},
-    {cls:'r2',lbl:'AE retenu France Travail',get:d=>d.ret,suf:' \u20ac',dec:0,tot:true},
+    {cls:'r2',lbl:'AE retenu FT (50%x70%)',get:d=>d.ret,suf:' \u20ac',dec:0,tot:true},
     {cls:'r3',lbl:'NET AE estime',get:d=>d.net,suf:' \u20ac',dec:0,tot:true},
     {cls:'r4',lbl:'ARE NETTE versee',get:d=>d.are,suf:' \u20ac',dec:0,tot:true},
     {cls:'r5',lbl:'CUMUL NET AE + ARE',get:d=>d.cum,suf:' \u20ac',dec:0,tot:true},
     {cls:'r6',lbl:'ARE consommee (j)',get:d=>d.conso,suf:' j',dec:2,tot:false},
+    {cls:'rdeg',lbl:'Cumul j consommes',get:d=>d.joursConsTot,suf:' j',dec:2,tot:false,deg:true},
     {cls:'r7',lbl:'Jours restants 822 j',get:d=>d.j8,suf:'',dec:2,tot:false,sg:true},
     {cls:'r8',lbl:'Jours restants 1 152 j',get:d=>d.j11,suf:'',dec:2,tot:false,sg:true},
   ];
@@ -472,7 +499,11 @@ function renderPipe(){
       if(typeof vv==='number')tot+=vv;
       const neg=r.sg&&vv!==null&&vv<0;
       const na=vv===null;
-      h+='<td style="'+(neg?'color:var(--red)!important;font-weight:800!important':'')+'">'+( na?'---':fmt(vv,r.dec)+r.suf)+'</td>';
+      // Indicateur dégressivité : surligner en orange si ce mois atteint le seuil
+      const isDeg = r.deg && d.deg;
+      const cellStyle = isDeg ? 'background:#FF6B35!important;color:#fff!important;font-weight:800!important;border-radius:4px' :
+                        neg ? 'color:var(--red)!important;font-weight:800!important' : '';
+      h+='<td style="'+cellStyle+'">'+(na?'---':(isDeg?'⚡ ':'')+fmt(vv,r.dec)+r.suf)+'</td>';
     });
     const lv=fc.length>0?r.get(fc[fc.length-1]):null;
     const dv=r.tot?tot:lv;
@@ -588,7 +619,7 @@ function renderBulles(ms){
     +'<div class="prog"><div class="pf" style="width:'+p8+'%;background:'+(p8>30?'var(--teal)':'var(--red)')+'"></div></div>'
     +'<div class="srow"><span class="sl">Au 1er fev. 2030</span><span class="sv" style="color:'+(ok8?'var(--green)':'var(--red)')+'">'+fmt(j8_62,2)+' j</span></div>'
     +'<div class="sverd" style="color:'+(ok8?'var(--green)':'var(--red)')+'">'+
-      (ok8?'Encore '+Math.round(Math.abs(j8_62))+' j &mdash; ARE Senior accessible':'Il manque ~'+Math.round(Math.abs(j8_62))+' j pour etre indemnise au 1er fev. 2030')
+      (ok8?'Encore '+Math.round(Math.abs(j8_62))+' j &mdash; ARE Senior accessible &bull; Dégress. au 183j consommé':'Il manque ~'+Math.round(Math.abs(j8_62))+' j pour etre indemnise au 1er fev. 2030')
     +'</div></div>'
     +'<div class="scard '+(ok11?'sok':'sko')+'">'
     +'<div class="stitle">Base 1 152 j (+ Boucles 53) <span class="sbadge '+(ok11?'sbok':'sbko')+'">'+(ok11?'ARE Senior v':'ARE Senior x')+'</span></div>'
@@ -700,45 +731,30 @@ async function gsLoad() {
   const url = getSyncUrl();
   if (!url) return false;
   setSyncStatus('loading', 'Chargement...');
-  return new Promise((resolve) => {
-    const cbName = '_gscb_' + Date.now();
-    const script = document.createElement('script');
-    const timer = setTimeout(() => {
-      setSyncStatus('error', 'Erreur');
-      script.remove();
-      delete window[cbName];
-      resolve(false);
-    }, 8000);
-    window[cbName] = function(data) {
-      clearTimeout(timer);
-      script.remove();
-      delete window[cbName];
-      try {
-        if (data && data.acts) {
-          acts = data.acts.map(a => {
-            const nv = {name: a.name||'Activite', values: {}, statut: {}};
-            const sv = a.values||a.v||{};
-            const ss = a.statut||a.s||{};
-            TL.forEach(t => { const kk=t.y+'-'+t.m; nv.values[kk]=+sv[kk]||0; nv.statut[kk]=ss[kk]==='R'?'R':'E'; });
-            return nv;
-          });
-          if (data.asm) asm = +data.asm;
-          if (data.asy) asy = +data.asy;
-          if (data.sy) sy = String(data.sy);
-          setSyncStatus('ok', 'Syncé');
-          resolve(true);
-        } else {
-          setSyncStatus('ok', 'Sync GS');
-          resolve(false);
-        }
-      } catch(e) {
-        setSyncStatus('error', 'Erreur');
-        resolve(false);
-      }
-    };
-    script.src = url + '?action=read&callback=' + cbName + '&t=' + Date.now();
-    document.head.appendChild(script);
-  });
+  try {
+    const r = await fetch(url + '?action=read', { mode: 'cors' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    if (data && data.acts) {
+      acts = data.acts.map(a => {
+        const nv = {name: a.name||'Activite', values: {}, statut: {}};
+        const sv = a.values||a.v||{};
+        const ss = a.statut||a.s||{};
+        TL.forEach(t => { const kk=t.y+'-'+t.m; nv.values[kk]=+sv[kk]||0; nv.statut[kk]=ss[kk]==='R'?'R':'E'; });
+        return nv;
+      });
+      if (data.asm) asm = +data.asm;
+      if (data.asy) asy = +data.asy;
+      if (data.sy) sy = String(data.sy);
+      setSyncStatus('ok', 'Syncé');
+      return true;
+    }
+    setSyncStatus('ok', 'Sync GS');
+    return false;
+  } catch(e) {
+    setSyncStatus('error', 'Erreur');
+    return false;
+  }
 }
 
 function openSyncConfig() {
