@@ -701,10 +701,10 @@ function exportCSV(){
 
 // ─── SYNC GOOGLE SHEETS ───────────────────────────────────────────────────────
 let gsSyncTimer = null;
-const GS_URL_KEY = 'ae_are_gs_url';
+const GS_URL_FIXED = 'https://script.google.com/macros/s/AKfycbyo3PewHzwqRsCpngrQVqPJg-9uE6fEn5m9gPBvRp8Bj-duPtIrBoH01JTYReS1DMIS/exec';
 
 function getSyncUrl() {
-  return localStorage.getItem(GS_URL_KEY) || '';
+  return GS_URL_FIXED;
 }
 
 function setSyncStatus(status, label) {
@@ -719,8 +719,9 @@ async function gsWrite(payload) {
   if (!url) return;
   setSyncStatus('loading', 'Sync...');
   try {
-    await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: payload, mode: 'no-cors' });
-    setSyncStatus('ok', 'Syncé');
+    const r = await fetch(url, { method: 'POST', body: payload });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    setSyncStatus('ok', 'Syncé ✓');
     setTimeout(() => setSyncStatus('ok', 'Sync GS'), 3000);
   } catch(e) {
     setSyncStatus('error', 'Erreur');
@@ -732,9 +733,10 @@ async function gsLoad() {
   if (!url) return false;
   setSyncStatus('loading', 'Chargement...');
   try {
-    const r = await fetch(url + '?action=read', { mode: 'cors' });
+    const r = await fetch(url + '?t=' + Date.now());
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
+    const resp = await r.json();
+    const data = resp.data || resp;
     if (data && data.acts) {
       acts = data.acts.map(a => {
         const nv = {name: a.name||'Activite', values: {}, statut: {}};
@@ -746,7 +748,7 @@ async function gsLoad() {
       if (data.asm) asm = +data.asm;
       if (data.asy) asy = +data.asy;
       if (data.sy) sy = String(data.sy);
-      setSyncStatus('ok', 'Syncé');
+      setSyncStatus('ok', 'Syncé ✓');
       return true;
     }
     setSyncStatus('ok', 'Sync GS');
@@ -775,26 +777,17 @@ document.addEventListener('click', function(e) {
 });
 
 function saveSyncConfig() {
-  const url = document.getElementById('gs-url-input').value.trim();
-  localStorage.setItem(GS_URL_KEY, url);
   closeSyncConfig();
-  if (url) {
-    setSyncStatus('ok', 'Syncé');
-    const data = {acts: acts.map(a => ({name:a.name,values:a.values,statut:a.statut})),asm,asy,sy,ts:new Date().toLocaleString('fr-FR')};
-    gsWrite(JSON.stringify(data));
-  }
 }
 
 async function testSyncConfig() {
-  const url = document.getElementById('gs-url-input').value.trim();
   const msg = document.getElementById('sync-test-msg');
-  if (!url) { msg.style.display='block'; msg.style.background='#FFF0EE'; msg.style.color='#C02010'; msg.textContent='URL vide !'; return; }
   msg.style.display='block'; msg.style.background='#FFFAE8'; msg.style.color='#7A5000'; msg.textContent='Test en cours...';
   try {
-    const r = await fetch(url + '?action=ping', { mode: 'cors' });
+    const r = await fetch(GS_URL_FIXED + '?t=' + Date.now());
     const data = await r.json();
     msg.style.background='#E8FFF0'; msg.style.color='#0A7040';
-    msg.textContent = '✓ Connexion OK !';
+    msg.textContent = '✓ Connexion Google Sheets OK !';
   } catch(e) {
     msg.style.background='#FFF0EE'; msg.style.color='#C02010';
     msg.textContent = 'Erreur : ' + e.message;
@@ -946,19 +939,18 @@ if(el) el.textContent='au '+labelDate+' à '+labelHeure;
       <button class="sync-modal-close" onclick="closeSyncConfig()">×</button>
     </div>
     <div class="sync-modal-body">
-      <div style="background:#FFF5F0;border:1.5px solid #F8C8A8;border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:#8B3010;line-height:1.7">
-        <strong>Sync automatique</strong> — Tes données se synchronisent sur tous tes appareils dès que tu enregistres l'URL.
+      <div style="background:#E8FFF0;border:1.5px solid #A8DFC8;border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:#0A6040;line-height:1.7">
+        <strong>Sync Google Sheets active</strong> — Tes données se synchronisent automatiquement sur tous tes appareils à chaque modification.
       </div>
-      <div>
-        <label class="sync-label">URL du script Google Apps Script</label>
-        <input type="url" class="sync-input" id="gs-url-input" placeholder="https://script.google.com/macros/s/..." value="https://script.google.com/macros/s/AKfycbzfZrEIrWViXktarZkLK6F_DBZmWMbwcqjfwkzvtGRrO-vAOb_TUn4Kb7yOp1Yz_-qE/exec">
+      <div style="font-size:12px;color:#666;line-height:1.6">
+        <strong>Script connecté :</strong><br>
+        <span style="font-family:monospace;font-size:11px;color:#888;word-break:break-all">AKfycbyo3PewHzwqRsCpngrQVqPJg-9uE6fEn5m9gPBvRp8Bj-duPtIrBoH01JTYReS1DMIS</span>
       </div>
       <div id="sync-test-msg" style="display:none;margin-top:10px;padding:9px 12px;border-radius:8px;font-size:12px"></div>
     </div>
     <div class="sync-modal-footer">
-      <button class="sync-btn-cancel" onclick="testSyncConfig()">🔊 Tester</button>
-      <button class="sync-btn-cancel" onclick="closeSyncConfig()">Annuler</button>
-      <button class="sync-btn-save" onclick="saveSyncConfig()">✓ Enregistrer</button>
+      <button class="sync-btn-cancel" onclick="testSyncConfig()">🔊 Tester la connexion</button>
+      <button class="sync-btn-save" onclick="closeSyncConfig()">Fermer</button>
     </div>
   </div>
 </div>
