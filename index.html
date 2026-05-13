@@ -219,7 +219,7 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
 <div class="layout">
 
 <div class="kpi-grid">
-  <div class="kpi k1"><div class="kl">ARE journali&egrave;re</div><div class="kv">97,32 &euro;/j</div><div class="ks">2 919,60 &euro;/mois &rarr; 2 431,80 apr&egrave;s 183 j</div></div>
+  <div class="kpi k1"><div class="kl">ARE journali&egrave;re</div><div class="kv">96,84 &euro;/j</div><div class="ks">2 905,20 &euro;/mois &rarr; 2 389,50 apr&egrave;s 183 j</div></div>
   <div class="kpi k2"><div class="kl">Droits acquis &mdash; ATMP 53</div><div class="kv">822 j</div><div class="ks">base initiale</div></div>
   <div class="kpi k3"><div class="kl">Droits acquis + Boucles 53</div><div class="kv">1&thinsp;152 j</div><div class="ks">+ 330 j rechargement</div></div>
   <div class="kpi k4"><div class="kl">Retraite cible</div><div class="kv">1 avr. 2032</div><div class="ks">64 ans</div></div>
@@ -249,7 +249,7 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
 <div class="crit">
   <div class="crit-title">&#9888; Date cible critique &mdash; 1er f&eacute;vrier 2030 (62 ans)</div>
   <div class="crit-body">
-    <div class="crit-text">Pour l&apos;ARE Senior, tu dois imp&eacute;rativement &ecirc;tre encore indemnis&eacute; &agrave; cette date. &bull; D&eacute;gressivit&eacute; au 183&egrave;me jour consomm&eacute; : ARE passe &agrave; 81,06 &euro;/j.</div>
+    <div class="crit-text">Pour l&apos;ARE Senior, tu dois imp&eacute;rativement &ecirc;tre encore indemnis&eacute; &agrave; cette date. &bull; D&eacute;gressivit&eacute; au 183&egrave;me jour consomm&eacute; : ARE passe &agrave; 79,65 &euro;/j.</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap" id="j62stats"></div>
   </div>
 </div>
@@ -321,8 +321,8 @@ body{font-family:'Outfit',sans-serif;background:#F5F2EE;color:#1A1714;font-size:
 </div>
 <script>
 const COLORS=['#1A56D4','#D94010','#6B3FD4','#A06000','#C2186E','#0D8B68','#1D9E75','#5A6282'];
-const ARE_DAY1=97.32,ARE_MONTH1=2919.60;   // ARE avant dégressivité
-const ARE_DAY2=81.06,ARE_MONTH2=2431.80;   // ARE après dégressivité (183ème jour consommé)
+const ARE_DAY1=96.84,ARE_MONTH1=2905.20;   // ARE avant dégressivité
+const ARE_DAY2=79.65,ARE_MONTH2=2389.50;   // ARE après dégressivité (183ème jour consommé)
 const SEUIL_DEG=183;                        // Seuil dégressivité en jours consommés
 const ABAT_MICRO=0.50;                      // Abattement micro-entrepreneur BIC/BNC
 const TAUX_ECRÊT=0.70;                     // Taux écrêtement France Travail
@@ -383,8 +383,8 @@ function calcTL(){
   // ARE_NETTE = max(0, ARE_mensuelle - AE_RETENU)
   // CONSO_jours = ARE_NETTE / ARE_journalière
   // Dégressivité au 183ème jour CONSOMMÉ :
-  //   - Avant : ARE_DAY1 = 97.32 €/j, ARE_MONTH1 = 2919.60 €/mois
-  //   - Après : ARE_DAY2 = 81.06 €/j, ARE_MONTH2 = 2431.80 €/mois
+  //   - Avant : ARE_DAY1 = 96.84 €/j, ARE_MONTH1 = 2905.20 €/mois
+  //   - Après : ARE_DAY2 = 79.65 €/j, ARE_MONTH2 = 2389.50 €/mois
   let j8=J_BASE, j11=J_BOUCLES;
   let joursConsTot=0; // cumul jours consommés pour dégressivité
   return TL.map(t=>{
@@ -701,10 +701,10 @@ function exportCSV(){
 
 // ─── SYNC GOOGLE SHEETS ───────────────────────────────────────────────────────
 let gsSyncTimer = null;
-const GS_URL_FIXED = 'https://script.google.com/macros/s/AKfycbyo3PewHzwqRsCpngrQVqPJg-9uE6fEn5m9gPBvRp8Bj-duPtIrBoH01JTYReS1DMIS/exec';
+const GS_URL_KEY = 'ae_are_gs_url';
 
 function getSyncUrl() {
-  return GS_URL_FIXED;
+  return localStorage.getItem(GS_URL_KEY) || '';
 }
 
 function setSyncStatus(status, label) {
@@ -719,9 +719,8 @@ async function gsWrite(payload) {
   if (!url) return;
   setSyncStatus('loading', 'Sync...');
   try {
-    const r = await fetch(url, { method: 'POST', body: payload });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    setSyncStatus('ok', 'Syncé ✓');
+    await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: payload, mode: 'no-cors' });
+    setSyncStatus('ok', 'Syncé');
     setTimeout(() => setSyncStatus('ok', 'Sync GS'), 3000);
   } catch(e) {
     setSyncStatus('error', 'Erreur');
@@ -733,10 +732,9 @@ async function gsLoad() {
   if (!url) return false;
   setSyncStatus('loading', 'Chargement...');
   try {
-    const r = await fetch(url + '?t=' + Date.now());
+    const r = await fetch(url + '?action=read', { mode: 'cors' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    const resp = await r.json();
-    const data = resp.data || resp;
+    const data = await r.json();
     if (data && data.acts) {
       acts = data.acts.map(a => {
         const nv = {name: a.name||'Activite', values: {}, statut: {}};
@@ -748,7 +746,7 @@ async function gsLoad() {
       if (data.asm) asm = +data.asm;
       if (data.asy) asy = +data.asy;
       if (data.sy) sy = String(data.sy);
-      setSyncStatus('ok', 'Syncé ✓');
+      setSyncStatus('ok', 'Syncé');
       return true;
     }
     setSyncStatus('ok', 'Sync GS');
@@ -777,17 +775,26 @@ document.addEventListener('click', function(e) {
 });
 
 function saveSyncConfig() {
+  const url = document.getElementById('gs-url-input').value.trim();
+  localStorage.setItem(GS_URL_KEY, url);
   closeSyncConfig();
+  if (url) {
+    setSyncStatus('ok', 'Syncé');
+    const data = {acts: acts.map(a => ({name:a.name,values:a.values,statut:a.statut})),asm,asy,sy,ts:new Date().toLocaleString('fr-FR')};
+    gsWrite(JSON.stringify(data));
+  }
 }
 
 async function testSyncConfig() {
+  const url = document.getElementById('gs-url-input').value.trim();
   const msg = document.getElementById('sync-test-msg');
+  if (!url) { msg.style.display='block'; msg.style.background='#FFF0EE'; msg.style.color='#C02010'; msg.textContent='URL vide !'; return; }
   msg.style.display='block'; msg.style.background='#FFFAE8'; msg.style.color='#7A5000'; msg.textContent='Test en cours...';
   try {
-    const r = await fetch(GS_URL_FIXED + '?t=' + Date.now());
+    const r = await fetch(url + '?action=ping', { mode: 'cors' });
     const data = await r.json();
     msg.style.background='#E8FFF0'; msg.style.color='#0A7040';
-    msg.textContent = '✓ Connexion Google Sheets OK !';
+    msg.textContent = '✓ Connexion OK !';
   } catch(e) {
     msg.style.background='#FFF0EE'; msg.style.color='#C02010';
     msg.textContent = 'Erreur : ' + e.message;
@@ -939,18 +946,19 @@ if(el) el.textContent='au '+labelDate+' à '+labelHeure;
       <button class="sync-modal-close" onclick="closeSyncConfig()">×</button>
     </div>
     <div class="sync-modal-body">
-      <div style="background:#E8FFF0;border:1.5px solid #A8DFC8;border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:#0A6040;line-height:1.7">
-        <strong>Sync Google Sheets active</strong> — Tes données se synchronisent automatiquement sur tous tes appareils à chaque modification.
+      <div style="background:#FFF5F0;border:1.5px solid #F8C8A8;border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:#8B3010;line-height:1.7">
+        <strong>Sync automatique</strong> — Tes données se synchronisent sur tous tes appareils dès que tu enregistres l'URL.
       </div>
-      <div style="font-size:12px;color:#666;line-height:1.6">
-        <strong>Script connecté :</strong><br>
-        <span style="font-family:monospace;font-size:11px;color:#888;word-break:break-all">AKfycbyo3PewHzwqRsCpngrQVqPJg-9uE6fEn5m9gPBvRp8Bj-duPtIrBoH01JTYReS1DMIS</span>
+      <div>
+        <label class="sync-label">URL du script Google Apps Script</label>
+        <input type="url" class="sync-input" id="gs-url-input" placeholder="https://script.google.com/macros/s/..." value="https://script.google.com/macros/s/AKfycbzfZrEIrWViXktarZkLK6F_DBZmWMbwcqjfwkzvtGRrO-vAOb_TUn4Kb7yOp1Yz_-qE/exec">
       </div>
       <div id="sync-test-msg" style="display:none;margin-top:10px;padding:9px 12px;border-radius:8px;font-size:12px"></div>
     </div>
     <div class="sync-modal-footer">
-      <button class="sync-btn-cancel" onclick="testSyncConfig()">🔊 Tester la connexion</button>
-      <button class="sync-btn-save" onclick="closeSyncConfig()">Fermer</button>
+      <button class="sync-btn-cancel" onclick="testSyncConfig()">🔊 Tester</button>
+      <button class="sync-btn-cancel" onclick="closeSyncConfig()">Annuler</button>
+      <button class="sync-btn-save" onclick="saveSyncConfig()">✓ Enregistrer</button>
     </div>
   </div>
 </div>
